@@ -86,6 +86,11 @@ int sys_uptime(void) {
     return arch_syscall(0, 0, 0, 0, 0, SYS_UPTIME);
 }
 
+// number_of_interruptシステムコール: 割り込み回数の取得
+int sys_number_of_interrupt(void) {
+    return arch_syscall(0, 0, 0, 0, 0, SYS_NUMBER_OF_INTERRUPT);
+}
+
 // shutdownシステムコール: システムのシャットダウン
 __noreturn void sys_shutdown(void) {
     arch_syscall(0, 0, 0, 0, 0, SYS_SHUTDOWN);

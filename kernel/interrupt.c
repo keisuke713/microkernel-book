@@ -8,6 +8,8 @@
 static struct task *irq_listeners[IRQ_MAX];
 // 起動してからの経過時間。単位はタイマー割り込みの周期 (TICK_HZ) に依存する。
 unsigned uptime_ticks = 0;
+// 割り込み発生回数
+unsigned number_of_interrupt = 0;
 
 // 割り込み通知を受け付けるようにする。
 error_t irq_listen(struct task *task, unsigned irq) {
@@ -49,6 +51,7 @@ error_t irq_unlisten(struct task *task, unsigned irq) {
 
 // ハードウェア割り込みハンドラ (タイマー割り込み以外)
 void handle_interrupt(unsigned irq) {
+    number_of_interrupt += 1;
     if (irq >= IRQ_MAX) {
         WARN("invalid IRQ: %u", irq);
         return;
@@ -68,6 +71,8 @@ void handle_interrupt(unsigned irq) {
 void handle_timer_interrupt(unsigned ticks) {
     // 起動してからの経過時間を更新
     uptime_ticks += ticks;
+
+    number_of_interrupt += 1;
 
     if (CPUVAR->id == 0) {
         // 各タスクのタイマーを更新する

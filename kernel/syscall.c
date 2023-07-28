@@ -301,6 +301,11 @@ static int sys_uptime(void) {
     return uptime_ticks / TICK_HZ;
 }
 
+// 割り込み回数を返す
+static int sys_number_of_interrupt(void) {
+    return number_of_interrupt;
+}
+
 // コンピューターの電源を切る。
 __noreturn static int sys_shutdown(void) {
     arch_shutdown();
@@ -358,6 +363,9 @@ long handle_syscall(long a0, long a1, long a2, long a3, long a4, long n) {
             break;
         case SYS_UPTIME:
             ret = sys_uptime();
+            break;
+        case SYS_NUMBER_OF_INTERRUPT:
+            ret = sys_number_of_interrupt();
             break;
         case SYS_SHUTDOWN:
             ret = sys_shutdown();
