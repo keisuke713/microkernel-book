@@ -131,3 +131,7 @@ rpc tcpip_dns_resolve(hostname: cstr[256]) -> (addr: uint32);
 oneway tcpip_data(sock: int);
 // TCP/IPサーバからメッセージ: ソケットがクローズされた
 oneway tcpip_closed(sock: int);
+
+// twice
+// 受け取った値を2倍にして返す
+rpc twice(value: int) -> (value: int);
