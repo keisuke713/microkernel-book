@@ -61,6 +61,9 @@ static error_t init_task_struct(struct task *task, task_t tid, const char *name,
     }
 
     task->state = TASK_BLOCKED;
+    for (int i = 0; i < 65; i++) {
+        task->message_types_can_send[i] = true;
+    }
     return OK;
 }
 
@@ -137,6 +140,7 @@ void task_resume(struct task *task) {
 // タスクを作成する。ipはユーザーモードで実行するアドレス (エントリーポイント)、pagerは
 // ページャータスク。
 task_t task_create(const char *name, uaddr_t ip, struct task *pager) {
+    INFO("task: %s", name);
     task_t tid = alloc_tid();
     if (!tid) {
         return ERR_TOO_MANY_TASKS;

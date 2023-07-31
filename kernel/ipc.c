@@ -7,6 +7,14 @@
 #include <libs/common/string.h>
 #include <libs/common/types.h>
 
+int message_types[16][65];
+
+// 許可されているメッセージタイプか判断する
+// 一旦ハードコード
+static bool can_send_message_of_(bool messages[65], int32_t type) {
+    return messages[type];
+}
+
 // メッセージの送信処理
 static error_t send_message(struct task *dst, __user struct message *m,
                             unsigned flags) {
@@ -15,6 +23,18 @@ static error_t send_message(struct task *dst, __user struct message *m,
     if (dst == current) {
         WARN("%s: tried to send a message to itself", current->name);
         return ERR_INVALID_ARG;
+    }
+
+    // 許可されていない宛先には送れない
+    // 要素数は一旦ハードコード
+    bool msgs[65];
+    memcpy(&msgs, current->message_types_can_send, 65);
+    struct message copied_msg;
+    memcpy(&copied_msg, (struct message *) m, sizeof(struct message));
+    bool can_send = can_send_message_of_(msgs, copied_msg.type);
+    if (!can_send) {
+        INFO("%s(tid %d) failed to message that is %d", current->name, current->tid, copied_msg.type);
+        return ERR_NOT_ALLOWED_MSG_TYPE;
     }
 
     // 送信するメッセージをコピーする。ユーザーポインタの場合、ページフォルトが発生する可能性
