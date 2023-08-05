@@ -399,6 +399,7 @@ static void tcp_process(struct tcp_pcb *pcb, ipv4addr_t src_addr,
                 WARN("task id is not valid. %d", task_id);
             }
             sock->task = task_id;
+            sock->tcp_pcb = new_pcb;
 
             // SYNを受信したので、SYN+ACKを返す
             new_pcb->next_seqno = 1;
@@ -426,6 +427,8 @@ static void tcp_process(struct tcp_pcb *pcb, ipv4addr_t src_addr,
                 pcb->last_ack += mbuf_len(payload);
                 pcb->local_winsize -= payload_len;
                 pcb->pending_flags |= TCP_PEND_ACK;
+                // いいのかは分からん
+                pcb->retransmit_at = 0;
 
                 mbuf_append(pcb->rx_buf, payload);
                 callback_tcp_data(pcb);
