@@ -12,6 +12,22 @@
 static struct tcp_pcb pcbs[TCP_PCBS_MAX];
 // 使用中のTCPソケット管理構造体のリスト
 static list_t active_pcbs = LIST_INIT(active_pcbs);
+// 使用中のTCPソケット管理構造体のリスト(パッシブ)
+static list_t passive_pcbs = LIST_INIT(passive_pcbs);
+
+struct socket sockets[SOCKETS_MAX];
+
+struct socket *alloc_socket(void) {
+    for (int i = 0; i < SOCKETS_MAX; i++) {
+        if (!sockets[i].used) {
+            sockets[i].fd = i + 1;
+            sockets[i].used = true;
+            return &sockets[i];
+        }
+    }
+
+    return 0;
+}
 
 // ローカルのIPアドレスとポート番号からPCBを検索する。
 static struct tcp_pcb *tcp_lookup_local(endpoint_t *local_ep) {
@@ -64,6 +80,25 @@ static struct tcp_pcb *tcp_lookup(endpoint_t *local_ep, endpoint_t *remote_ep) {
     return NULL;
 }
 
+// 宛先に指定されたアドレスとポート番号からパッシブオープンのPCBを探す。local_epはローカルの組.
+static struct tcp_pcb *tcp_lookup_passive(endpoint_t *local_ep) {
+    LIST_FOR_EACH (pcb, &passive_pcbs, struct tcp_pcb, next) {
+        // ローカルのIPアドレスなんて都度変わるからいらんな
+        // if (pcb->local.addr != IPV4_ADDR_UNSPECIFIED
+        //     && pcb->local.addr != local_ep->addr) {
+        //     continue;
+        // }
+
+        // ローカルのポート番号が一致するか
+        if (pcb->local.port != local_ep->port) {
+            continue;
+        }
+
+        return pcb;
+    }
+    return NULL;
+}
+
 // 新しいPCBを作成する。
 struct tcp_pcb *tcp_new(void *arg) {
     // 空いているPCBを探す。
@@ -100,7 +135,19 @@ struct tcp_pcb *tcp_new(void *arg) {
 }
 
 // TCPコネクションを開く (アクティブオープン)。
-error_t tcp_connect(struct tcp_pcb *pcb, ipv4addr_t dst_addr, port_t dst_port) {
+error_t tcp_connect(struct tcp_pcb *pcb, ipv4addr_t dst_addr, port_t dst_port, port_t src_port) {
+    // pcbのローカルがwellknown portなら番号をそっちにする
+    // 現状80番のwebサーバーのみなので下記の書き方
+    if (src_port == 80) {
+        pcb->local.addr = IPV4_ADDR_UNSPECIFIED;
+        pcb->local.port = src_port;
+        pcb->remote.addr = dst_addr;
+        pcb->remote.port = dst_port;
+        pcb->state = TCP_STATE_SYN_ACK_SENT;
+        pcb->pending_flags = (TCP_PEND_SYN | TCP_PEND_ACK);
+        list_push_back(&active_pcbs, &pcb->next);
+        return OK;
+    }
     // エフェメラルポート (49152-65535) から空いているポートを探す。
     for (int port = 49152; port <= 65535; port++) {
         endpoint_t ep;
@@ -121,6 +168,25 @@ error_t tcp_connect(struct tcp_pcb *pcb, ipv4addr_t dst_addr, port_t dst_port) {
 
     WARN("run out of client tcp ports");
     return ERR_TRY_AGAIN;
+}
+
+// TCPコネクションを開く(パッシブオープン)
+error_t tcp_connect_passive(struct tcp_pcb *pcb, port_t src_port) {
+    endpoint_t ep;
+    ep.port = src_port;
+    ep.addr = IPV4_ADDR_UNSPECIFIED;
+
+    if (tcp_lookup_local(&ep) != NULL) {
+        WARN("port: %d is already used", src_port);
+        return ERR_ALREADY_USED;
+    }
+
+    memcpy(&pcb->local, &ep, sizeof(pcb->local));
+    pcb->state = TCP_STATE_WAIT;
+    // これいらないかも
+    pcb->pending_flags |= (TCP_PEND_SYN | TCP_PEND_ACK);
+    list_push_back(&passive_pcbs, &pcb->next);
+    return OK;
 }
 
 // TCPコネクションを削除する。FINパケットを送信するような行儀の良い切断処理はしない。
@@ -273,7 +339,8 @@ static void tcp_process(struct tcp_pcb *pcb, ipv4addr_t src_addr,
     // このTCP実装はリオーダリングや SACK (Selective ACK) など面倒な処理をサポートして
     // おらず、TCPパケットが順番に到着することを前提としている。予期したシーケンス番号で
     // なければ同じ確認応答番号のACKパケットを送ることで、次に欲しいデータの再送を促す。
-    if (pcb->state != TCP_STATE_SYN_SENT && seq != pcb->last_ack) {
+    // パッシブオープンの際も相手から送られる最初のシーケンス番号は予測不可なので外す
+    if (pcb->state != TCP_STATE_SYN_SENT && pcb->state != TCP_STATE_WAIT && seq != pcb->last_ack) {
         WARN("tcp: unexpected sequence number: %08x (expected %08x)", seq,
              pcb->last_ack);
         pcb->pending_flags |= TCP_PEND_ACK;
@@ -300,6 +367,46 @@ static void tcp_process(struct tcp_pcb *pcb, ipv4addr_t src_addr,
             pcb->retransmit_at = 0;
             pcb->pending_flags |= TCP_PEND_ACK;
             break;
+        }
+        // パッシブオープンでSYN＋ACKを送って相手からACKを待っている状態
+        case TCP_STATE_SYN_ACK_SENT: {
+            // ACKを受信したかチェック
+            if ((flags & TCP_ACK) == 0) {
+                WARN("tcp: expected ACK but received %02x", flags);
+            }
+
+            pcb->next_seqno = ack;
+            pcb->last_ack = seq + 1;
+            pcb->state = TCP_STATE_ESTABLISHED;
+            pcb->retransmit_at = 0;
+            pcb->pending_flags |= TCP_PEND_ACK;
+            break;
+        }
+        // パッシブオープンしてリクエストを待っている状態.ソケットを新しく作って返す
+        case TCP_STATE_WAIT: {
+            // パッシブオープンに対してのアクセスなのでソケットを新しく作る
+            struct socket *sock = alloc_socket();
+            struct tcp_pcb *new_pcb = tcp_new(sock);
+            error_t err = tcp_connect(new_pcb, src_addr, src_port, pcb->local.port);
+            if (err != OK) {
+                sock->used = false;
+                return;
+            }
+
+            char web_server_name[11] = "web_server";
+            task_t task_id = sys_find_task(web_server_name);
+            if (task_id <= 0) {
+                WARN("task id is not valid. %d", task_id);
+            }
+            sock->task = task_id;
+
+            // SYNを受信したので、SYN+ACKを返す
+            new_pcb->next_seqno = 1;
+            new_pcb->last_seqno = 0;
+            new_pcb->last_ack = seq + 1;
+            new_pcb->state = TCP_STATE_SYN_ACK_SENT;
+            new_pcb->retransmit_at = 0;
+            new_pcb->pending_flags |= (TCP_PEND_SYN | TCP_PEND_ACK);
         }
         // コネクションが確立している状態。データを受信する。
         case TCP_STATE_ESTABLISHED: {
@@ -369,9 +476,12 @@ void tcp_receive(ipv4addr_t dst, ipv4addr_t src, mbuf_t pkt) {
 
     struct tcp_pcb *pcb = tcp_lookup(&dst_ep, &src_ep);
     if (!pcb) {
-        WARN("tcp: no PCB found for %pI4:%d -> %pI4:%d", src, src_ep.port, dst,
-             dst_ep.port);
-        return;
+        pcb = tcp_lookup_passive(&dst_ep);
+        if (!pcb) {
+            WARN("tcp: no PCB found for %pI4:%d -> %pI4:%d", src, src_ep.port, dst,
+                dst_ep.port);
+            return;
+        }
     }
 
     tcp_process(pcb, src, src_ep.port, &header, pkt);

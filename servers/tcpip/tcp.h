@@ -17,7 +17,9 @@
 // 簡単のため、このTCP実装は素朴なHTTPクライアントが動く程度の状態しか実装していない。
 // パッシブオープンやアクティブクローズなどを実装する場合には、より多くの状態が登場する。
 enum tcp_state {
+    TCP_STATE_WAIT,         // パッシブオープン
     TCP_STATE_SYN_SENT,     // SYNを送信し、SYN+ACKを待っている状態
+    TCP_STATE_SYN_ACK_SENT, // SYN+ACKを送信して、ACKを待っている状態
     TCP_STATE_ESTABLISHED,  // コネクションを確立した状態
     TCP_STATE_CLOSED,       // コネクションが閉じられた状態
 };
@@ -71,10 +73,23 @@ struct tcp_header {
     uint16_t urgent;     // 緊急ポインタ
 } __packed;
 
+// ソケット管理構造体
+struct socket {
+    bool used;                // 使用中か
+    task_t task;              // 所有するタスク
+    int fd;                   // ソケットID
+    struct tcp_pcb *tcp_pcb;  // TCPコントロールブロック
+};
+
 struct tcp_pcb *tcp_new(void *arg);
-error_t tcp_connect(struct tcp_pcb *sock, ipv4addr_t dst_addr, port_t dst_port);
+error_t tcp_connect(struct tcp_pcb *sock, ipv4addr_t dst_addr, port_t dst_port, port_t src_port);
+error_t tcp_connect_passive(struct tcp_pcb *pcb, port_t src_port);
 void tcp_close(struct tcp_pcb *sock);
 void tcp_write(struct tcp_pcb *sock, const void *data, size_t len);
 size_t tcp_read(struct tcp_pcb *sock, void *buf, size_t buf_len);
 void tcp_receive(ipv4addr_t dst, ipv4addr_t src, mbuf_t pkt);
 void tcp_flush(void);
+struct socket *alloc_socket(void);
+
+// ソケット管理構造体
+extern struct socket sockets[SOCKETS_MAX];

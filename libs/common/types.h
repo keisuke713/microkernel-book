@@ -168,6 +168,7 @@ typedef __builtin_va_list va_list;
 #define SYS_HINAVM       16
 #define SYS_SHUTDOWN     17
 #define SYS_NUMBER_OF_INTERRUPT 18
+#define SYS_FIND_TASK 19
 
 // pm_alloc() のフラグ
 #define PM_ALLOC_UNINITIALIZED 0         // ゼロクリアされていなくてもよい

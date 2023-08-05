@@ -119,6 +119,8 @@ rpc fs_delete(path: cstr[256]) -> ();
 
 // TCPソケットの作成・コネクションの確立 (アクティブオープン)
 rpc tcpip_connect(dst_addr: uint32, dst_port: uint16) -> (sock: int);
+// TCPソケットの作成・コネクションの確立 (パッシブオープン)
+rpc tcpip_connect_passive(src_port: uint16) -> (sock: int);
 // ソケットのクローズ
 rpc tcpip_close(sock: int) -> ();
 // TCP: データの送信

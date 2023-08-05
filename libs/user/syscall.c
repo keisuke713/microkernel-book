@@ -96,3 +96,8 @@ __noreturn void sys_shutdown(void) {
     arch_syscall(0, 0, 0, 0, 0, SYS_SHUTDOWN);
     UNREACHABLE();
 }
+
+// 渡されたタスクのidを返す
+task_t sys_find_task(const char *name) {
+    return arch_syscall((uintptr_t) name, 0, 0, 0, 0, SYS_FIND_TASK);
+}
