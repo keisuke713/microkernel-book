@@ -5,7 +5,6 @@
 #include <libs/user/malloc.h>
 
 static task_t tcpip_server;
-static char request[512];
 
 // TCPコネクションを開く(パッシブオープン)
 // 合っているかは知らん
@@ -31,18 +30,68 @@ static char* extract_path(uint8_t *buf) {
     int start;
     start = 0;
     while (*(buf + start++) != 32) {}
-    INFO("message start: %d", *(buf + start));
+    start++;
 
     int end;
     end = start;
     while (*(buf + end++) != 32) {}
-    INFO("message end: %d", *(buf + end));
 
+    // 末尾のスペースを無視するため
     int len;
-    len = end - start;
+    len = end - (start + 1);
     char *path = malloc(len);
     memcpy(path, (void *)(buf + start), len);
     return path;
+}
+
+uint8_t* fs_read(const char *path) {
+    task_t fs_server = ipc_lookup("fs");
+    ASSERT_OK(fs_server);
+
+    struct message m;
+    m.type = FS_OPEN_MSG;
+    strcpy_safe(m.fs_open.path, sizeof(m.fs_open.path), path);
+    error_t err = ipc_call(fs_server, &m);
+    if (IS_ERROR(err)) {
+        WARN("failed to open a file: '%s' (%s)", path, err2str(err));
+        return NULL;
+    }
+
+    ASSERT(m.type == FS_OPEN_REPLY_MSG);
+    int fd = m.fs_open_reply.fd;
+
+    while (true) {
+        m.type = FS_READ_MSG;
+        m.fs_read.fd = fd;
+        m.fs_read.len = PAGE_SIZE;
+        error_t err = err = ipc_call(fs_server, &m);
+        if (err == ERR_EOF) {
+            break;
+        }
+
+        if (IS_ERROR(err)) {
+            WARN("failed to read a file: %s", err2str(err));
+            return NULL;
+        }
+
+        ASSERT(m.type == FS_READ_REPLY_MSG);
+        unsigned end =
+            MIN(sizeof(m.fs_read_reply.data) - 1, m.fs_read_reply.data_len);
+        m.fs_read_reply.data[end] = '\0';
+        return (uint8_t *) m.fs_read_reply.data;
+    }
+    return NULL;
+}
+
+static void send(int sock, const uint8_t *buf, size_t len) {
+    struct message m;
+    ASSERT(len < sizeof(m.tcpip_write.data));
+
+    m.type = TCPIP_WRITE_MSG;
+    m.tcpip_write.sock = sock;
+    memcpy(m.tcpip_write.data, buf, len);
+    m.tcpip_write.data_len = len;
+    ASSERT_OK(ipc_call(tcpip_server, &m));
 }
 
 void main(void) {
@@ -62,16 +111,34 @@ void main(void) {
             case TCPIP_DATA_MSG: {
                 m.type = TCPIP_READ_MSG;
                 m.tcpip_read.sock = m.tcpip_data.sock;
+                int sock = m.tcpip_data.sock;
                 error_t err = ipc_call(tcpip_server, &m);
 
                 ASSERT_OK(err);
 
                 // リクエストを受け取ったらパスを抽出
                 char* path = extract_path((uint8_t *)m.tcpip_read_reply.data);
-                INFO("after start: %s", path);
 
-                // TODO ファイルシステムに該当のファイルを問い合わせて
-                // それをレスポンスと共に返す
+                // TODO not foundの処理
+                uint8_t* content = fs_read(path);
+
+                // レスポンスヘッダーの構築
+                int buf_len = 1024;
+                char *buf = malloc(buf_len);
+
+                char *p = buf;
+                for (const char *s = "HTTP/1.1 200 OK "; *s; s++) {
+                    *p++ = *s;
+                }
+                for (const char *s = " connection: closed\r\n\r\n "; *s; s++) {
+                    *p++ = *s;
+                }
+                // bodyの構築
+                for (const char *s = content; *s; s++) {
+                    *p++ = *s;
+                }
+
+                send(sock, (uint8_t *)buf, strlen(buf));
             }
         }
     }
