@@ -94,6 +94,14 @@ static void send(int sock, const uint8_t *buf, size_t len) {
     ASSERT_OK(ipc_call(tcpip_server, &m));
 }
 
+static void active_close(int sock) {
+    struct message m;
+    
+    m.type = TCPIP_CLOSE_ACTIVE_MSG;
+    m.tcpip_close_active.sock = sock;
+    ASSERT_OK(ipc_call(tcpip_server, &m));
+}
+
 void main(void) {
     // 初期化
     init();
@@ -127,10 +135,12 @@ void main(void) {
                 char *buf = malloc(buf_len);
 
                 char *p = buf;
-                for (const char *s = "HTTP/1.1 200 OK "; *s; s++) {
+                // レスポンス
+                for (const char *s = "HTTP/1.1 200 OK\r\n"; *s; s++) {
                     *p++ = *s;
                 }
-                for (const char *s = " connection: closed\r\n\r\n "; *s; s++) {
+                // ヘッダー
+                for (const char *s = "Content-Type: text/plain\r\n\r\n"; *s; s++) {
                     *p++ = *s;
                 }
                 // bodyの構築
@@ -139,6 +149,8 @@ void main(void) {
                 }
 
                 send(sock, (uint8_t *)buf, strlen(buf));
+
+                active_close(sock);
             }
         }
     }

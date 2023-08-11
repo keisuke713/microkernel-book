@@ -252,6 +252,7 @@ static void tcp_transmit(struct tcp_pcb *pcb) {
 
     if (pending_flags & TCP_PEND_FIN) {
         flags |= TCP_FIN;
+        pcb->state = TCP_STATE_FIN_SENT;
     }
 
     // 送信するデータ・フラグがなければパケットを送信しない。
@@ -449,6 +450,28 @@ static void tcp_process(struct tcp_pcb *pcb, ipv4addr_t src_addr,
             }
 
             break;
+        }
+        case TCP_STATE_FIN_SENT: {
+            if (flags & TCP_FIN) {
+                pcb->state = TCP_STATE_CLOSED;
+                pcb->retransmit_at = 0;
+                pcb->last_ack++;
+                pcb->pending_flags |= TCP_PEND_ACK;
+                callback_tcp_fin(pcb);
+            }
+        }
+        case TCP_STATE_CLOSED: {
+            if (flags & TCP_PSH) {
+                size_t payload_len = mbuf_len(payload);
+                if (0 < payload_len && payload_len <= pcb->local_winsize) {
+                    // 受信したデータに対するACKを返す
+                    pcb->last_ack += mbuf_len(payload);
+                    pcb->local_winsize -= payload_len;
+                    pcb->retransmit_at = 0;
+                    pcb->pending_flags |= TCP_PEND_ACK;
+                }
+            }
+
         }
         default:
             WARN("tcp: unexpected packet in state=%d", pcb->state);

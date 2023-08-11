@@ -22,6 +22,7 @@ enum tcp_state {
     TCP_STATE_SYN_ACK_SENT, // SYN+ACKを送信して、ACKを待っている状態
     TCP_STATE_ESTABLISHED,  // コネクションを確立した状態
     TCP_STATE_CLOSED,       // コネクションが閉じられた状態
+    TCP_STATE_FIN_SENT      // finパケットを送信し相手からのACKを待っている状態
 };
 
 // 送信待ちフラグ
