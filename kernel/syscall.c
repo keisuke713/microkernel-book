@@ -306,6 +306,24 @@ static int sys_number_of_interrupt(void) {
     return number_of_interrupt;
 }
 
+// 渡されたタスクのidを返す
+static task_t sys_find_task(__user const char *name) {
+    // タスク名を取得
+    char namebuf[TASK_NAME_LEN];
+    error_t err = strcpy_from_user(namebuf, sizeof(namebuf), name);
+    if (err != OK) {
+        return err;
+    }
+
+    LIST_FOR_EACH (task, &active_tasks, struct task, next) {
+        if (strcmp(namebuf, task->name) == 0) {
+            return task->tid;
+        }
+    }
+
+    return 0;
+}
+
 // コンピューターの電源を切る。
 __noreturn static int sys_shutdown(void) {
     arch_shutdown();
@@ -366,6 +384,9 @@ long handle_syscall(long a0, long a1, long a2, long a3, long a4, long n) {
             break;
         case SYS_NUMBER_OF_INTERRUPT:
             ret = sys_number_of_interrupt();
+            break;
+        case SYS_FIND_TASK:
+            ret = sys_find_task((__user const char *) a0);
             break;
         case SYS_SHUTDOWN:
             ret = sys_shutdown();

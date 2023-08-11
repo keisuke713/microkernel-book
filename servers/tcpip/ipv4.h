@@ -3,6 +3,7 @@
 
 // 送信パケットのTTLフィールドのデフォルト値
 #define DEFAULT_TTL 32
+#define SOCKETS_MAX    256
 
 // IPv4アドレスを表す型
 typedef uint32_t ipv4addr_t;
