@@ -22,4 +22,6 @@ int sys_serial_write(const char *buf, size_t len);
 int sys_serial_read(const char *buf, int max_len);
 error_t sys_time(int milliseconds);
 int sys_uptime(void);
+int sys_number_of_interrupt(void);
 __noreturn void sys_shutdown(void);
+task_t sys_find_task(const char *name);

@@ -14,20 +14,6 @@
 // ネットワークデバイスドライバサーバ
 static task_t net_device;
 // ソケット管理構造体
-static struct socket sockets[SOCKETS_MAX];
-
-// ソケットIDを割り当てる。使えるソケットIDがなければ0を返す。
-static struct socket *alloc_socket(void) {
-    for (int i = 0; i < SOCKETS_MAX; i++) {
-        if (!sockets[i].used) {
-            sockets[i].fd = i + 1;
-            sockets[i].used = true;
-            return &sockets[i];
-        }
-    }
-
-    return 0;
-}
 
 // ソケットIDからソケット構造体を取得する。存在しなければNULLを返す。
 static struct socket *lookup_socket(task_t task, int sock) {
@@ -219,7 +205,7 @@ void main(void) {
                 struct socket *sock = alloc_socket();
                 struct tcp_pcb *pcb = tcp_new(sock);
                 error_t err = tcp_connect(pcb, m.tcpip_connect.dst_addr,
-                                          m.tcpip_connect.dst_port);
+                                          m.tcpip_connect.dst_port, -1);
                 if (err != OK) {
                     sock->used = false;
                     ipc_reply_err(m.src, err);
@@ -231,6 +217,25 @@ void main(void) {
 
                 m.type = TCPIP_CONNECT_REPLY_MSG;
                 m.tcpip_connect_reply.sock = sock->fd;
+                ipc_send_noblock(m.src, &m);
+                break;
+            }
+            case TCPIP_CONNECT_PASSIVE_MSG: {
+                struct socket *sock = alloc_socket();
+                struct tcp_pcb *pcb = tcp_new(sock);
+                error_t err = tcp_connect_passive(pcb, m.tcpip_connect_passive.src_port);
+
+                if (err != OK) {
+                    sock->used = false;
+                    ipc_reply_err(m.src, err);
+                    break;
+                }
+
+                sock->task = m.src;
+                sock->tcp_pcb = pcb;
+
+                m.type = TCPIP_CONNECT_PASSIVE_REPLY_MSG;
+                m.tcpip_connect_passive_reply.sock = sock->fd;
                 ipc_send_noblock(m.src, &m);
                 break;
             }
@@ -275,6 +280,15 @@ void main(void) {
                 m.type = TCPIP_CLOSE_REPLY_MSG;
                 ipc_reply(m.src, &m);
                 break;
+            }
+            case TCPIP_CLOSE_ACTIVE_MSG: {
+                struct socket *sock = lookup_socket(m.src, m.tcpip_close_active.sock);
+                if (!sock) {
+                    ipc_reply_err(m.src, ERR_INVALID_ARG);
+                    break;
+                }
+                sock->tcp_pcb->pending_flags |= TCP_PEND_FIN;
+                sock->tcp_pcb->retransmit_at = 0;
             }
             default:
                 WARN("unknown message type: %s from %d", msgtype2str(m.type),

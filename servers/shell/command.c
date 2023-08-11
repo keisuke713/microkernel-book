@@ -142,6 +142,27 @@ static void do_uptime(struct args *args) {
     printf("%d seconds\n", sys_uptime());
 }
 
+static void do_twice(struct args *args) {
+    if (args->argc != 2) {
+        WARN("Usage: twice <VALUE>");
+        return;
+    }
+
+    task_t twice_server = ipc_lookup("twice");
+
+    // twiceサーバーにメッセージを送信する
+    struct message m;
+    m.type = TWICE_MSG;
+    m.twice.value = atoi(args->argv[1]);
+    ASSERT_OK(ipc_call(twice_server, &m));
+
+    // twiceサーバからの応答が想定されたものか確認する
+    ASSERT(m.type == TWICE_REPLY_MSG);
+    // ASSERT(m.add_reply.value == 100);
+
+    INFO("double number I received is %d", m.twice_reply.value);
+}
+
 __noreturn static void do_shutdown(struct args *args) {
     INFO("shutting down...");
     sys_shutdown();
@@ -162,6 +183,7 @@ static struct command commands[] = {
     {.name = "ping", .run = do_ping, .help = "Send a ping to pong server"},
     {.name = "uptime", .run = do_uptime, .help = "Show seconds since boot"},
     {.name = "shutdown", .run = do_shutdown, .help = "Shut down the system"},
+    {.name = "twice", .run = do_twice, .help = "twice number"},
     {.name = NULL},
 };
 

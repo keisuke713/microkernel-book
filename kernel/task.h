@@ -39,6 +39,7 @@ struct task {
     list_t pages;                   // 利用中メモリページのリスト
     notifications_t notifications;  // 受信済みの通知
     struct message m;               // メッセージの一時保存領域
+    bool message_types_can_send[65];   // 送信可能なメッセージタイプ
 };
 
 extern list_t active_tasks;

@@ -8,14 +8,6 @@
 #define TIMER_INTERVAL 100
 #define SOCKETS_MAX    256
 
-// ソケット管理構造体
-struct socket {
-    bool used;                // 使用中か
-    task_t task;              // 所有するタスク
-    int fd;                   // ソケットID
-    struct tcp_pcb *tcp_pcb;  // TCPコントロールブロック
-};
-
 void callback_ethernet_transmit(mbuf_t pkt);
 void callback_tcp_data(struct tcp_pcb *sock);
 void callback_tcp_rst(struct tcp_pcb *sock);

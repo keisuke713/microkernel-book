@@ -123,8 +123,12 @@ void http_get(const char *url) {
     for (const char *s = "GET /"; *s; s++) {
         *p++ = *s;
     }
-    for (const char *s = path; *s; s++) {
-        *p++ = *s;
+    // http://www.google.com などパスがない場合もあるのでNILLかどうかをチェックする
+    if (path != NULL) {
+        for (const char *s = path; *s; s++) {
+            INFO("s: %s", s);
+            *p++ = *s;
+        }
     }
     for (const char *s = " HTTP/1.0\r\nconnection: closed\r\n\r\n"; *s; s++) {
         *p++ = *s;

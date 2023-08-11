@@ -2,6 +2,7 @@
 #include <libs/common/types.h>
 
 extern unsigned uptime_ticks;
+extern unsigned number_of_interrupt;
 
 struct task;
 error_t irq_listen(struct task *task, unsigned irq);

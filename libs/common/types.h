@@ -102,37 +102,38 @@ typedef __builtin_va_list va_list;
 //
 // エラーコード
 //
-#define IS_OK(err)          (!IS_ERROR(err))      // 正常終了かどうかを判定する
-#define IS_ERROR(err)       (((long) (err)) < 0)  // エラーかどうかを判定する
-#define OK                  0                     // 正常終了
-#define ERR_NO_MEMORY       -1                    // メモリ不足
-#define ERR_NO_RESOURCES    -2                    // リソースが足りない
-#define ERR_ALREADY_EXISTS  -3                    // 既に存在する
-#define ERR_ALREADY_USED    -4                    // 既に使われている
-#define ERR_ALREADY_DONE    -5                    // 既に完了している
-#define ERR_STILL_USED      -6                    // まだ使われている
-#define ERR_NOT_FOUND       -7                    // 見つからない
-#define ERR_NOT_ALLOWED     -8                    // 許可されていない
-#define ERR_NOT_SUPPORTED   -9                    // サポートされていない
-#define ERR_UNEXPECTED      -10                   // 予期しない入力値・ケース
-#define ERR_INVALID_ARG     -11                   // 無効な引数・入力値
-#define ERR_INVALID_TASK    -12                   // 無効なタスクID
-#define ERR_INVALID_SYSCALL -13                   // 無効なシステムコール番号
-#define ERR_INVALID_PADDR   -14                   // 無効な物理アドレス
-#define ERR_INVALID_UADDR   -15                   // 無効なユーザー空間のアドレス
-#define ERR_TOO_MANY_TASKS  -16                   // タスクが多すぎる
-#define ERR_TOO_LARGE       -17                   // 大きすぎる
-#define ERR_TOO_SMALL       -18                   // 小さすぎる
-#define ERR_WOULD_BLOCK     -19                   // ブロックしてしまうので中断した
-#define ERR_TRY_AGAIN       -20                   // 一時的な失敗: 再試行すると成功するかもしれない
-#define ERR_ABORTED         -21                   // 中断された
-#define ERR_EMPTY           -22                   // 空である
-#define ERR_NOT_EMPTY       -23                   // 空ではない
-#define ERR_DEAD_LOCK       -24                   // デッドロックが発生した
-#define ERR_NOT_A_FILE      -25                   // ファイルではない
-#define ERR_NOT_A_DIR       -26                   // ディレクトリではない
-#define ERR_EOF             -27                   // ファイル・データの終端
-#define ERR_END             -28                   // 最後のエラーコードでなければならない
+#define IS_OK(err)               (!IS_ERROR(err))      // 正常終了かどうかを判定する
+#define IS_ERROR(err)            (((long) (err)) < 0)  // エラーかどうかを判定する
+#define OK                       0                     // 正常終了
+#define ERR_NO_MEMORY            -1                    // メモリ不足
+#define ERR_NO_RESOURCES         -2                    // リソースが足りない
+#define ERR_ALREADY_EXISTS       -3                    // 既に存在する
+#define ERR_ALREADY_USED         -4                    // 既に使われている
+#define ERR_ALREADY_DONE         -5                    // 既に完了している
+#define ERR_STILL_USED           -6                    // まだ使われている
+#define ERR_NOT_FOUND            -7                    // 見つからない
+#define ERR_NOT_ALLOWED          -8                    // 許可されていない
+#define ERR_NOT_SUPPORTED        -9                    // サポートされていない
+#define ERR_UNEXPECTED           -10                   // 予期しない入力値・ケース
+#define ERR_INVALID_ARG          -11                   // 無効な引数・入力値
+#define ERR_INVALID_TASK         -12                   // 無効なタスクID
+#define ERR_INVALID_SYSCALL      -13                   // 無効なシステムコール番号
+#define ERR_INVALID_PADDR        -14                   // 無効な物理アドレス
+#define ERR_INVALID_UADDR        -15                   // 無効なユーザー空間のアドレス
+#define ERR_TOO_MANY_TASKS       -16                   // タスクが多すぎる
+#define ERR_TOO_LARGE            -17                   // 大きすぎる
+#define ERR_TOO_SMALL            -18                   // 小さすぎる
+#define ERR_WOULD_BLOCK          -19                   // ブロックしてしまうので中断した
+#define ERR_TRY_AGAIN            -20                   // 一時的な失敗: 再試行すると成功するかもしれない
+#define ERR_ABORTED              -21                   // 中断された
+#define ERR_EMPTY                -22                   // 空である
+#define ERR_NOT_EMPTY            -23                   // 空ではない
+#define ERR_DEAD_LOCK            -24                   // デッドロックが発生した
+#define ERR_NOT_A_FILE           -25                   // ファイルではない
+#define ERR_NOT_A_DIR            -26                   // ディレクトリではない
+#define ERR_EOF                  -27                   // ファイル・データの終端
+#define ERR_END                  -28                   // 最後のエラーコードでなければならない
+#define ERR_NOT_ALLOWED_MSG_TYPE -29              // 許可されていないメッセージタイプ 
 
 // メモリページサイズ
 #define PAGE_SIZE 4096
@@ -166,6 +167,8 @@ typedef __builtin_va_list va_list;
 #define SYS_UPTIME       15
 #define SYS_HINAVM       16
 #define SYS_SHUTDOWN     17
+#define SYS_NUMBER_OF_INTERRUPT 18
+#define SYS_FIND_TASK 19
 
 // pm_alloc() のフラグ
 #define PM_ALLOC_UNINITIALIZED 0         // ゼロクリアされていなくてもよい

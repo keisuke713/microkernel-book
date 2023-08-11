@@ -31,11 +31,12 @@ static const char *error_names[] = {
     [-ERR_NOT_A_FILE] = "Not A File",
     [-ERR_NOT_A_DIR] = "Not A Directory",
     [-ERR_EOF] = "End of File",
+    [-ERR_NOT_ALLOWED_MSG_TYPE] = "msg type not to be allowed",
 };
 
 // エラー番号からエラーメッセージを取得する。
 const char *err2str(int err) {
-    if (err < ERR_END || err > 0) {
+    if (err < ERR_NOT_ALLOWED_MSG_TYPE || err > 0) {
         return "(Unknown Error)";
     }
 
