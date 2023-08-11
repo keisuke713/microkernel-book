@@ -281,6 +281,15 @@ void main(void) {
                 ipc_reply(m.src, &m);
                 break;
             }
+            case TCPIP_CLOSE_ACTIVE_MSG: {
+                struct socket *sock = lookup_socket(m.src, m.tcpip_close_active.sock);
+                if (!sock) {
+                    ipc_reply_err(m.src, ERR_INVALID_ARG);
+                    break;
+                }
+                sock->tcp_pcb->pending_flags |= TCP_PEND_FIN;
+                sock->tcp_pcb->retransmit_at = 0;
+            }
             default:
                 WARN("unknown message type: %s from %d", msgtype2str(m.type),
                      m.src);
