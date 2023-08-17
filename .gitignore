@@ -6,3 +6,5 @@
 *.pcap
 *.pyc
 idea
+
+.DS_Store

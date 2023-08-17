@@ -7,12 +7,14 @@
 #include <libs/common/string.h>
 #include <libs/common/types.h>
 
-int message_types[16][65];
+int message_types[16][68];
 
 // 許可されているメッセージタイプか判断する
 // 一旦ハードコード
-static bool can_send_message_of_(bool messages[65], int32_t type) {
-    return messages[type];
+static bool can_send_message_of_(bool messages[68], int32_t type) {
+    // return messages[type];
+    // すいません、一旦全部true
+    return true;
 }
 
 // メッセージの送信処理
