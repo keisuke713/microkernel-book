@@ -1,1 +1,1 @@
-objs-y += shell.o sqlite3.o
+objs-y += sqlite3.o

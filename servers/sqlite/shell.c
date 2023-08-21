@@ -113,11 +113,9 @@ typedef unsigned short int u16;
 # define _POSIX_SOURCE
 #endif
 
-/*
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-*/
 #include <assert.h>
 #include <math.h>
 #include "sqlite3.h"
