@@ -10,7 +10,7 @@ BUILD_DIR ?= build
 LLVM_PREFIX ?=
 
 # 自動起動するサーバのリスト
-BOOT_SERVERS ?= fs tcpip shell virtio_blk virtio_net pong twice web_server sqlite3
+BOOT_SERVERS ?= fs tcpip shell virtio_blk virtio_net pong twice web_server
 
 # 起動時に自動実行するシェルコマンド (テストを自動化したいときに便利)
 #
@@ -124,6 +124,7 @@ CFLAGS += -Werror=pointer-integer-compare
 CFLAGS += -Werror=tautological-constant-out-of-range-compare
 CFLAGS += -Werror=visibility
 CFLAGS += -Wno-unused-parameter
+CFLAGS += -Wno-nullability-completeness
 # トップディレクトリをインクルードパスに追加する
 CFLAGS += -I$(top_dir)
 # 各ライブラリの "libs/<ライブラリ名>/<CPUアーキテクチャ名>" をインクルードパスに追加する
@@ -140,6 +141,11 @@ CFLAGS += -O1 -fsanitize=undefined -DDEBUG_BUILD
 else
 # リリースビルド
 CFLAGS += -O3 -DRELEASE_BUILD
+endif
+
+ifneq ($(LTO),)
+LDFLAGS += --lto-O1 --thinlto-jobs=all --thinlto-cache-policy=cache_size_bytes=2g --thinlto-cache-dir=$(BUILD_DIR)/thinlto -plugin-opt=-import-instr-limit=10
+CFLAGS += -flto=thin
 endif
 
 # エミュレータ (QEMU) の起動コマンド
