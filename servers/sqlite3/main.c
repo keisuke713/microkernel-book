@@ -1,12 +1,14 @@
 #include "sqlite3.h"
 #include <libs/common/print.h>
 #include <libs/common/string.h>
+#include <libs/user/ipc.h>
 
 extern char _binary_test_sqlite3_start[];
 extern char _binary_test_sqlite3_end[];
 extern char _binary_test_sqlite3_size[];
 
 uint8_t *get_database(void) {
+    // これはメモリに埋め込んでいるはず
     return (uint8_t *) _binary_test_sqlite3_start;
 }
 
@@ -20,8 +22,49 @@ static void not_implemented() {
 }
 
 static int hinaosRead(sqlite3_file *file, void *pBuf, int iAmt, sqlite3_int64 iOfst) {
-    // TRACE("read: pBuf=%x, offset=%x, size=%x", pBuf, iOfst, iAmt);
-    memcpy(pBuf, get_database() + iOfst, iAmt);
+    // fsを使ったらファイルシステムじゃないから後々vistro_blkを使うようにする(blk_device)
+    task_t fs_server = ipc_lookup("fs");
+    ASSERT_OK(fs_server);
+
+    // ファイルシステム上に置かれているtest.sqlite3を取得
+    struct message m;
+    m.type = FS_OPEN_MSG;
+    char *path = "test.sqlite3";
+    strcpy_safe(m.fs_open.path, sizeof(m.fs_open.path), path);
+    error_t err = ipc_call(fs_server, &m);
+    if (IS_ERROR(err)) {
+      WARN("failed to open a file: '%s' (%s)", path, err2str(err));
+    }
+
+    ASSERT(m.type == FS_OPEN_REPLY_MSG);
+    INFO("fd: %d", m.fs_open_reply.fd);
+    int fd = m.fs_open_reply.fd;
+
+    // dbの内容を読み込んでメモリに展開する
+    m.type = FS_READ_MSG;
+    m.fs_read.fd = fd;
+    err = ipc_call(fs_server, &m);
+    if (IS_ERROR(err)) {
+      WARN("failed to read a file: '%s' (%S)", fd, err2str(err));
+    }
+    INFO("contents: %s", m.fs_read_reply.data);
+    uint8_t database[512];
+    memcpy((void *)database, (void *)m.fs_read_reply.data, (size_t) 512);
+
+    TRACE("==============");
+    INFO("read: pBuf=%x, offset=%x, size=%x", pBuf, iOfst, iAmt);
+    backtrace();
+
+    // ここでメモリに渡しているのをディスクからメモリに展開した内容渡せば良いのでは
+    // memcpy(pBuf, get_database() + iOfst, iAmt);
+    // dbの内容を引数として渡されたアドレスにコピーする
+    memcpy(pBuf, (void *)database + iOfst, iAmt);
+    return SQLITE_OK;
+}
+
+static int hinaosWrite(sqlite3_file *file, void *pBuf, int iAmt, sqlite3_int64 iOfst) {
+    // TRACE("write: pBuf=%x, offset=%x, size=%x", pBuf, iOfst, iAmt);
+    // do something
     return SQLITE_OK;
 }
 
@@ -80,7 +123,7 @@ static int sqlite3_os_open(
       3,                              /* iVersion */
       hinaosClose,                      /* xClose */
       hinaosRead,                       /* xRead */
-      (void *) not_implemented,                      /* xWrite */
+      (void *) hinaosWrite,                      /* xWrite */
       (void *) not_implemented,                   /* xTruncate */
       (void *) hinaosSync,                       /* xSync */
       (void *) hinaosFileSize,                   /* xFileSize */
@@ -126,6 +169,14 @@ static int hinaosAccess(
     return SQLITE_OK;
 }
 
+static int hinaosRondomeness(
+  sqlite3_vfs *pVfs,
+  int nByte,
+  char *zOut
+){
+    return SQLITE_OK;
+}
+
 
 SQLITE_API int sqlite3_os_init(void) {
     static  sqlite3_vfs vfs = {
@@ -143,7 +194,7 @@ SQLITE_API int sqlite3_os_init(void) {
       (void *) not_implemented,     /* xDlError */
       (void *) not_implemented,     /* xDlSym */
       (void *) not_implemented,     /* xDlClose */
-      (void *) not_implemented,     /* xRandomness */
+      (void *) hinaosRondomeness,     /* xRandomness */
       (void *) not_implemented,     /* xSleep */
       (void *) not_implemented,     /* xCurrentTime */
       (void *) not_implemented,     /* xGetLastError */
@@ -190,19 +241,10 @@ void main() {
     }
     char *errmsg;
 
-    // 付け足した
-    // const char* sql2 = "INSERT INTO users (name, email) VALUES ('John Smith junior', 'john2@example.com');";
-    // INFO("new executing query: %s", sql2);
-    // rc = sqlite3_exec(db, sql2, callback, 0, &errmsg);
-    // if(rc != SQLITE_OK) {
-    //     PANIC("sqlite3 error: %s\n", errmsg);
-    // }
-    // ここまで
-
-
-    const char* sql = "SELECT * FROM users;";
-    INFO("executing query: %s", sql);
-    rc = sqlite3_exec(db, sql, callback, 0, &errmsg);
+    // オープンの仕組みを見たいからコメントアウト
+    const char* select_sql = "SELECT * FROM users;";
+    INFO("executing query: %s", select_sql);
+    rc = sqlite3_exec(db, select_sql, callback, 0, &errmsg);
     if(rc != SQLITE_OK) {
         PANIC("sqlite3 error: %s\n", errmsg);
     }

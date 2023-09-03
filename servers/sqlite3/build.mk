@@ -23,9 +23,15 @@ test.sqlite3:
 	$(PROGRESS) SQLITE3 $(@)
 	sqlite3 test.sqlite3 < servers/sqlite3/test.sql
 
+# ファイルシステムに配置
+$(FS)/test.sqlite3:
+	$(PROGRESS) SQLITE3 $(@)
+	sqlite3 $(FS)/test.sqlite3 < servers/sqlite3/test.sql
+
 # SQLiteのテスト用データベースをELFファイルに埋め込む。
+# ファイルから展開する場合は必要ないと思うが互換性維持のため
 objs-y += test_database.o
-$(BUILD_DIR)/servers/sqlite3/test_database.o: test.sqlite3
+$(BUILD_DIR)/servers/sqlite3/test_database.o: test.sqlite3 $(FS)/test.sqlite3
 	$(PROGRESS) OBJCOPY $(@)
 	mkdir -p $(@D)
 	$(OBJCOPY) -Ibinary -Oelf32-littleriscv test.sqlite3 $@

@@ -6,11 +6,15 @@ ARCH ?= riscv32
 # ビルド時の生成物を置くディレクトリ
 BUILD_DIR ?= build
 
+# ファイルシステムのルート
+FS ?= fs
+
 # ClangやLLD、llvm-objcopyなどのLLVMツールチェインのプレフィックス
 LLVM_PREFIX ?=
 
 # 自動起動するサーバのリスト
-BOOT_SERVERS ?= fs tcpip shell virtio_blk virtio_net pong twice web_server
+# BOOT_SERVERS ?= fs tcpip shell virtio_blk virtio_net pong twice web_server
+BOOT_SERVERS ?= sqlite3 fs virtio_blk
 
 # 起動時に自動実行するシェルコマンド (テストを自動化したいときに便利)
 #
@@ -174,6 +178,8 @@ build: $(hinaos_elf) $(hinafs_img)
 .PHONY: clean
 clean:
 	$(RM) -rf $(BUILD_DIR)
+	$(RM) test.sqlite3
+	$(RM) $(FS)/test.sqlite3
 
 # QEMU (エミュレータ) でHinaOSを試すコマンド
 .PHONY: run
