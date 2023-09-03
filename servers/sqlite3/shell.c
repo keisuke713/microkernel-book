@@ -113,14 +113,11 @@ typedef unsigned short int u16;
 # define _POSIX_SOURCE
 #endif
 
-/*
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-*/
-
 #include "sqlite3.h"
 typedef sqlite3_int64 i64;
 typedef sqlite3_uint64 u64;
@@ -128,26 +125,18 @@ typedef unsigned char u8;
 #if SQLITE_USER_AUTHENTICATION
 # include "sqlite3userauth.h"
 #endif
-/*
 #include <ctype.h>
 #include <stdarg.h>
-*/
 
 #if !defined(_WIN32) && !defined(WIN32)
-/*
 # include <signal.h>
-*/
 # if !defined(__RTP__) && !defined(_WRS_KERNEL) && !defined(SQLITE_WASI)
-/*
 #  include <pwd.h>
-*/
 # endif
 #endif
 #if (!defined(_WIN32) && !defined(WIN32)) || defined(__MINGW32__)
-/*
 # include <unistd.h>
 # include <dirent.h>
-*/
 # define GETPID getpid
 # if defined(__MINGW32__)
 #  define DIRENT dirent
@@ -158,10 +147,8 @@ typedef unsigned char u8;
 #else
 # define GETPID (int)GetCurrentProcessId
 #endif
-/*
 #include <sys/types.h>
 #include <sys/stat.h>
-*/
 
 #if HAVE_READLINE
 # include <readline/readline.h>

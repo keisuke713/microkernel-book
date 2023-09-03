@@ -32,11 +32,7 @@
 */
 #ifndef SQLITE3_H
 #define SQLITE3_H
-
-/* Needed for the definition of va_list */
-/*
-#include <stdarg.h>
-*/
+#include <stdarg.h>     /* Needed for the definition of va_list */
 
 /*
 ** Make sure we can call this stuff from C++.
@@ -2987,9 +2983,9 @@ SQLITE_API void sqlite3_free_table(char **result);
 ** See also:  [built-in printf()], [printf() SQL function]
 */
 SQLITE_API char *sqlite3_mprintf(const char*,...);
-SQLITE_API char *sqlite3_vmprintf(const char*, int va_list);
+SQLITE_API char *sqlite3_vmprintf(const char*, va_list);
 SQLITE_API char *sqlite3_snprintf(int,char*,const char*, ...);
-SQLITE_API char *sqlite3_vsnprintf(int,char*,const char*, int va_list);
+SQLITE_API char *sqlite3_vsnprintf(int,char*,const char*, va_list);
 
 /*
 ** CAPI3REF: Memory Allocation Subsystem
@@ -8311,7 +8307,7 @@ SQLITE_API char *sqlite3_str_finish(sqlite3_str*);
 ** subsequent call to [sqlite3_str_errcode(X)].
 */
 SQLITE_API void sqlite3_str_appendf(sqlite3_str*, const char *zFormat, ...);
-SQLITE_API void sqlite3_str_vappendf(sqlite3_str*, const char *zFormat, int va_list);
+SQLITE_API void sqlite3_str_vappendf(sqlite3_str*, const char *zFormat, va_list);
 SQLITE_API void sqlite3_str_append(sqlite3_str*, const char *zIn, int N);
 SQLITE_API void sqlite3_str_appendall(sqlite3_str*, const char *zIn);
 SQLITE_API void sqlite3_str_appendchar(sqlite3_str*, int N, char C);
