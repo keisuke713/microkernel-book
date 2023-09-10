@@ -37,28 +37,30 @@ static int hinaosRead(sqlite3_file *file, void *pBuf, int iAmt, sqlite3_int64 iO
     }
 
     ASSERT(m.type == FS_OPEN_REPLY_MSG);
-    INFO("fd: %d", m.fs_open_reply.fd);
     int fd = m.fs_open_reply.fd;
 
-    // dbの内容を読み込んでメモリに展開する
-    m.type = FS_READ_MSG;
-    m.fs_read.fd = fd;
+    // fdのオフセット位置をiOfstへ移動する
+    int offset = 0;
+    m.type = FS_SEEK_MSG;
+    m.fs_seek.fd = fd;
+    m.fs_seek.offset = iOfst;
     err = ipc_call(fs_server, &m);
-    if (IS_ERROR(err)) {
-      WARN("failed to read a file: '%s' (%S)", fd, err2str(err));
+    while (offset < iAmt) {
+      // 読み込みたいバイト数
+      size_t read_len = MIN(sizeof(m.fs_read_reply.data), iAmt - offset);
+
+      struct message m;
+      m.type = FS_READ_MSG;
+      m.fs_read.fd = fd;
+      m.fs_read.len = read_len;
+      error_t err = ipc_call(fs_server, &m);
+
+      DEBUG_ASSERT(m.type == FS_READ_REPLY_MSG);
+      memcpy((uint8_t *) pBuf + offset, (void *)m.fs_read_reply.data, read_len);
+      offset += read_len;
     }
-    INFO("contents: %s", m.fs_read_reply.data);
-    uint8_t database[512];
-    memcpy((void *)database, (void *)m.fs_read_reply.data, (size_t) 512);
 
-    TRACE("==============");
     INFO("read: pBuf=%x, offset=%x, size=%x", pBuf, iOfst, iAmt);
-    backtrace();
-
-    // ここでメモリに渡しているのをディスクからメモリに展開した内容渡せば良いのでは
-    // memcpy(pBuf, get_database() + iOfst, iAmt);
-    // dbの内容を引数として渡されたアドレスにコピーする
-    memcpy(pBuf, (void *)database + iOfst, iAmt);
     return SQLITE_OK;
 }
 
@@ -240,9 +242,7 @@ void main() {
         PANIC("can't open sqlite3 database: %s\n", sqlite3_errmsg(db));
     }
     char *errmsg;
-
-    // オープンの仕組みを見たいからコメントアウト
-    const char* select_sql = "SELECT * FROM users;";
+    const char* select_sql = "SELECT * FROM users where id = 1;";
     INFO("executing query: %s", select_sql);
     rc = sqlite3_exec(db, select_sql, callback, 0, &errmsg);
     if(rc != SQLITE_OK) {

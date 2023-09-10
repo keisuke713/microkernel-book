@@ -112,6 +112,8 @@ rpc fs_mkfile(path: cstr[256]) -> ();
 rpc fs_mkdir(path: cstr[256]) -> ();
 // ファイル・ディレクトリの削除
 rpc fs_delete(path: cstr[256]) -> ();
+// ファイルのオフセットの移動
+rpc fs_seek(fd: int, offset: int) -> (offset: int);
 
 //
 // TCP/IPサーバ
