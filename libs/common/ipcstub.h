@@ -417,7 +417,7 @@ struct interrupt_reply_fields {
     struct interrupt_fields interrupt; \
     struct interrupt_reply_fields interrupt_reply; \
 
-#define IPCSTUB_MSGID_MAX 70
+#define IPCSTUB_MSGID_MAX 68
 #define IPCSTUB_MSGID2STR \
     (const char *[]){ \
      \
