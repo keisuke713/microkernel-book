@@ -198,14 +198,6 @@ struct fs_delete_fields {
 struct fs_delete_reply_fields {
 };
 
-struct fs_seek_fields {
-    int fd;
-    int offset;
-};
-struct fs_seek_reply_fields {
-    int offset;
-};
-
 struct tcpip_connect_fields {
     uint32_t dst_addr;
     uint16_t dst_port;
@@ -323,26 +315,24 @@ struct twice_reply_fields {
 #define FS_MKDIR_REPLY_MSG 48
 #define FS_DELETE_MSG 49
 #define FS_DELETE_REPLY_MSG 50
-#define FS_SEEK_MSG 51
-#define FS_SEEK_REPLY_MSG 52
-#define TCPIP_CONNECT_MSG 53
-#define TCPIP_CONNECT_REPLY_MSG 54
-#define TCPIP_CONNECT_PASSIVE_MSG 55
-#define TCPIP_CONNECT_PASSIVE_REPLY_MSG 56
-#define TCPIP_CLOSE_ACTIVE_MSG 57
-#define TCPIP_CLOSE_ACTIVE_REPLY_MSG 58
-#define TCPIP_CLOSE_MSG 59
-#define TCPIP_CLOSE_REPLY_MSG 60
-#define TCPIP_WRITE_MSG 61
-#define TCPIP_WRITE_REPLY_MSG 62
-#define TCPIP_READ_MSG 63
-#define TCPIP_READ_REPLY_MSG 64
-#define TCPIP_DNS_RESOLVE_MSG 65
-#define TCPIP_DNS_RESOLVE_REPLY_MSG 66
-#define TCPIP_DATA_MSG 67
-#define TCPIP_CLOSED_MSG 68
-#define TWICE_MSG 69
-#define TWICE_REPLY_MSG 70
+#define TCPIP_CONNECT_MSG 51
+#define TCPIP_CONNECT_REPLY_MSG 52
+#define TCPIP_CONNECT_PASSIVE_MSG 53
+#define TCPIP_CONNECT_PASSIVE_REPLY_MSG 54
+#define TCPIP_CLOSE_ACTIVE_MSG 55
+#define TCPIP_CLOSE_ACTIVE_REPLY_MSG 56
+#define TCPIP_CLOSE_MSG 57
+#define TCPIP_CLOSE_REPLY_MSG 58
+#define TCPIP_WRITE_MSG 59
+#define TCPIP_WRITE_REPLY_MSG 60
+#define TCPIP_READ_MSG 61
+#define TCPIP_READ_REPLY_MSG 62
+#define TCPIP_DNS_RESOLVE_MSG 63
+#define TCPIP_DNS_RESOLVE_REPLY_MSG 64
+#define TCPIP_DATA_MSG 65
+#define TCPIP_CLOSED_MSG 66
+#define TWICE_MSG 67
+#define TWICE_REPLY_MSG 68
 
 //
 //  各種マクロの定義
@@ -398,8 +388,6 @@ struct twice_reply_fields {
     struct fs_mkdir_reply_fields fs_mkdir_reply; \
     struct fs_delete_fields fs_delete; \
     struct fs_delete_reply_fields fs_delete_reply; \
-    struct fs_seek_fields fs_seek; \
-    struct fs_seek_reply_fields fs_seek_reply; \
     struct tcpip_connect_fields tcpip_connect; \
     struct tcpip_connect_reply_fields tcpip_connect_reply; \
     struct tcpip_connect_passive_fields tcpip_connect_passive; \
@@ -419,7 +407,7 @@ struct twice_reply_fields {
     struct twice_fields twice; \
     struct twice_reply_fields twice_reply; \
 
-#define IPCSTUB_MSGID_MAX 70
+#define IPCSTUB_MSGID_MAX 68
 #define IPCSTUB_MSGID2STR \
     (const char *[]){ \
      \
@@ -501,36 +489,33 @@ struct twice_reply_fields {
         [49] = "fs_delete", \
         [50] = "fs_delete_reply", \
      \
-        [51] = "fs_seek", \
-        [52] = "fs_seek_reply", \
+        [51] = "tcpip_connect", \
+        [52] = "tcpip_connect_reply", \
      \
-        [53] = "tcpip_connect", \
-        [54] = "tcpip_connect_reply", \
+        [53] = "tcpip_connect_passive", \
+        [54] = "tcpip_connect_passive_reply", \
      \
-        [55] = "tcpip_connect_passive", \
-        [56] = "tcpip_connect_passive_reply", \
+        [55] = "tcpip_close_active", \
+        [56] = "tcpip_close_active_reply", \
      \
-        [57] = "tcpip_close_active", \
-        [58] = "tcpip_close_active_reply", \
+        [57] = "tcpip_close", \
+        [58] = "tcpip_close_reply", \
      \
-        [59] = "tcpip_close", \
-        [60] = "tcpip_close_reply", \
+        [59] = "tcpip_write", \
+        [60] = "tcpip_write_reply", \
      \
-        [61] = "tcpip_write", \
-        [62] = "tcpip_write_reply", \
+        [61] = "tcpip_read", \
+        [62] = "tcpip_read_reply", \
      \
-        [63] = "tcpip_read", \
-        [64] = "tcpip_read_reply", \
+        [63] = "tcpip_dns_resolve", \
+        [64] = "tcpip_dns_resolve_reply", \
      \
-        [65] = "tcpip_dns_resolve", \
-        [66] = "tcpip_dns_resolve_reply", \
+        [65] = "tcpip_data", \
      \
-        [67] = "tcpip_data", \
+        [66] = "tcpip_closed", \
      \
-        [68] = "tcpip_closed", \
-     \
-        [69] = "twice", \
-        [70] = "twice_reply", \
+        [67] = "twice", \
+        [68] = "twice_reply", \
      \
     }
 
@@ -734,14 +719,6 @@ struct twice_reply_fields {
     _Static_assert( \
         sizeof(struct fs_delete_reply_fields) < 4096, \
         "'fs_delete_reply' message is too large, should be less than 4096 bytes" \
-    ); \
-    _Static_assert( \
-        sizeof(struct fs_seek_fields) < 4096, \
-        "'fs_seek' message is too large, should be less than 4096 bytes" \
-    ); \
-    _Static_assert( \
-        sizeof(struct fs_seek_reply_fields) < 4096, \
-        "'fs_seek_reply' message is too large, should be less than 4096 bytes" \
     ); \
     _Static_assert( \
         sizeof(struct tcpip_connect_fields) < 4096, \
