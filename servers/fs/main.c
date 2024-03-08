@@ -159,7 +159,7 @@ void main(void) {
                 break;
             }
             case FS_READ_MSG: {
-                uint8_t buf[1024];
+                uint8_t buf[512];
                 size_t len = MIN(m.fs_read.len, sizeof(buf));
                 int read_len =
                     do_readwrite(m.src, m.fs_read.fd, buf, len, false);
@@ -248,15 +248,6 @@ void main(void) {
                 }
 
                 m.type = FS_DELETE_REPLY_MSG;
-                ipc_reply(m.src, &m);
-                break;
-            }
-            case FS_SEEK_MSG: {
-                struct open_file *file = lookup_open_file(m.src, m.fs_seek.fd);
-                file->offset += m.fs_seek.offset;
-
-                m.type = FS_SEEK_REPLY_MSG;
-                m.fs_seek_reply.offset = file->offset;
                 ipc_reply(m.src, &m);
                 break;
             }
