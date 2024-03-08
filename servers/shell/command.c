@@ -163,6 +163,23 @@ static void do_twice(struct args *args) {
     INFO("double number I received is %d", m.twice_reply.value);
 }
 
+static void do_interrupt(struct args *args) {
+    if (args->argc != 1) {
+        WARN("Usage: interrupt <VALUE>");
+        return;
+    }
+
+    task_t interrupt_server = ipc_lookup("interrupt");
+
+    struct message m;
+    m.type = INTERRUPT_MSG;
+    ASSERT_OK(ipc_call(interrupt_server, &m));
+
+    ASSERT(m.type == INTERRUPT_REPLY_MSG);
+
+    INFO("n interrup is %d", m.interrupt_reply.value);
+}
+
 __noreturn static void do_shutdown(struct args *args) {
     INFO("shutting down...");
     sys_shutdown();
@@ -184,6 +201,7 @@ static struct command commands[] = {
     {.name = "uptime", .run = do_uptime, .help = "Show seconds since boot"},
     {.name = "shutdown", .run = do_shutdown, .help = "Shut down the system"},
     {.name = "twice", .run = do_twice, .help = "twice number"},
+    {.name = "interrupt", .run = do_interrupt, .help = "show n interrupt"},
     {.name = NULL},
 };
 

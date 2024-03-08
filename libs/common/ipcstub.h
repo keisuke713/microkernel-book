@@ -263,6 +263,12 @@ struct twice_reply_fields {
     int value;
 };
 
+struct interrupt_fields {
+};
+struct interrupt_reply_fields {
+    int value;
+};
+
 
 
 #define EXCEPTION_MSG 1
@@ -333,6 +339,8 @@ struct twice_reply_fields {
 #define TCPIP_CLOSED_MSG 66
 #define TWICE_MSG 67
 #define TWICE_REPLY_MSG 68
+#define INTERRUPT_MSG 69
+#define INTERRUPT_REPLY_MSG 70
 
 //
 //  各種マクロの定義
@@ -406,8 +414,10 @@ struct twice_reply_fields {
     struct tcpip_closed_fields tcpip_closed; \
     struct twice_fields twice; \
     struct twice_reply_fields twice_reply; \
+    struct interrupt_fields interrupt; \
+    struct interrupt_reply_fields interrupt_reply; \
 
-#define IPCSTUB_MSGID_MAX 68
+#define IPCSTUB_MSGID_MAX 70
 #define IPCSTUB_MSGID2STR \
     (const char *[]){ \
      \
@@ -516,6 +526,9 @@ struct twice_reply_fields {
      \
         [67] = "twice", \
         [68] = "twice_reply", \
+     \
+        [69] = "interrupt", \
+        [70] = "interrupt_reply", \
      \
     }
 
@@ -791,5 +804,13 @@ struct twice_reply_fields {
     _Static_assert( \
         sizeof(struct twice_reply_fields) < 4096, \
         "'twice_reply' message is too large, should be less than 4096 bytes" \
+    ); \
+    _Static_assert( \
+        sizeof(struct interrupt_fields) < 4096, \
+        "'interrupt' message is too large, should be less than 4096 bytes" \
+    ); \
+    _Static_assert( \
+        sizeof(struct interrupt_reply_fields) < 4096, \
+        "'interrupt_reply' message is too large, should be less than 4096 bytes" \
     ); \
 
