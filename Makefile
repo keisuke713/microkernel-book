@@ -6,15 +6,11 @@ ARCH ?= riscv32
 # ビルド時の生成物を置くディレクトリ
 BUILD_DIR ?= build
 
-# ファイルシステムのルート
-FS ?= fs
-
 # ClangやLLD、llvm-objcopyなどのLLVMツールチェインのプレフィックス
 LLVM_PREFIX ?=
 
 # 自動起動するサーバのリスト
-# BOOT_SERVERS ?= fs tcpip shell virtio_blk virtio_net pong twice web_server
-BOOT_SERVERS ?= sqlite3 fs virtio_blk
+BOOT_SERVERS ?= fs tcpip shell virtio_blk virtio_net pong twice web_server sqlite3
 
 # 起動時に自動実行するシェルコマンド (テストを自動化したいときに便利)
 #
@@ -128,7 +124,6 @@ CFLAGS += -Werror=pointer-integer-compare
 CFLAGS += -Werror=tautological-constant-out-of-range-compare
 CFLAGS += -Werror=visibility
 CFLAGS += -Wno-unused-parameter
-CFLAGS += -Wno-nullability-completeness
 # トップディレクトリをインクルードパスに追加する
 CFLAGS += -I$(top_dir)
 # 各ライブラリの "libs/<ライブラリ名>/<CPUアーキテクチャ名>" をインクルードパスに追加する
@@ -145,11 +140,6 @@ CFLAGS += -O1 -fsanitize=undefined -DDEBUG_BUILD
 else
 # リリースビルド
 CFLAGS += -O3 -DRELEASE_BUILD
-endif
-
-ifneq ($(LTO),)
-LDFLAGS += --lto-O1 --thinlto-jobs=all --thinlto-cache-policy=cache_size_bytes=2g --thinlto-cache-dir=$(BUILD_DIR)/thinlto -plugin-opt=-import-instr-limit=10
-CFLAGS += -flto=thin
 endif
 
 # エミュレータ (QEMU) の起動コマンド
@@ -178,8 +168,6 @@ build: $(hinaos_elf) $(hinafs_img)
 .PHONY: clean
 clean:
 	$(RM) -rf $(BUILD_DIR)
-	$(RM) test.sqlite3
-	$(RM) $(FS)/test.sqlite3
 
 # QEMU (エミュレータ) でHinaOSを試すコマンド
 .PHONY: run
