@@ -139,3 +139,7 @@ oneway tcpip_closed(sock: int);
 // twice
 // 受け取った値を2倍にして返す
 rpc twice(value: int) -> (value: int);
+
+// interrupt
+// 割り込み回数を返す
+rpc interrupt() -> (value: int);
