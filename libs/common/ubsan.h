@@ -33,3 +33,4 @@ void __ubsan_handle_out_of_bounds(void);
 void __ubsan_handle_shift_out_of_bounds(void);
 void __ubsan_handle_builtin_unreachable(void);
 void __ubsan_handle_invalid_builtin(void);
+void __ubsan_handle_function_type_mismatch(void);
