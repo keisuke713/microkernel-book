@@ -1,6 +1,11 @@
 #include <libs/common/backtrace.h>
 #include <libs/common/print.h>
 
+// 本来動的に生成されるが一旦描いてる
+const char *__program_name(void) {
+    return "hoge"; 
+}
+
 // シンボルテーブルの中から指定されたアドレスに最も近いシンボルを探す。
 struct symbol *find_symbol(vaddr_t addr) {
     ASSERT(__symbol_table.magic == SYMBOL_TABLE_MAGIC);
