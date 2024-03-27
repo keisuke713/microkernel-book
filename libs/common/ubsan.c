@@ -61,5 +61,5 @@ void __ubsan_handle_invalid_builtin(void) {
     report_ubsan_event("invalid builtin");
 }
 void __ubsan_handle_function_type_mismatch(void) {
-    report_ubsan_event("function type mismatch");
+    report_ubsan_event("function_type_mismatch");
 }
