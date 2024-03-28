@@ -93,6 +93,60 @@ task_t task_spawn(struct bootfs_file *file) {
     // ELFセグメントを仮想アドレス空間にマップする。
     strcpy_safe(task->name, sizeof(task->name), file->name);
 
+    // helloアプリケーションのみプリページングを実装する
+    if (strcmp(task->name, "hello") == 0) {
+        // エントリーポイントの取得
+        uint32_t e_entry = ehdr->e_entry;
+        // 4KiBでアラインメント
+        uint32_t e_entry_align_down = ALIGN_DOWN(e_entry, PAGE_SIZE);
+
+        // エントリポイントを含むセグメントのヘッダー
+        elf_phdr_t *phdr = NULL;
+        // 該当のセグメントからエントリポイントへのオフセット
+        uaddr_t offset;
+
+        for (unsigned i = 0; i < task->ehdr->e_phnum; i++) {
+            if (task->phdrs[i].p_type != PT_LOAD) {
+                // メモリ上にないセグメントは無視する。
+                continue;
+            }
+
+            uaddr_t start = task->phdrs[i].p_vaddr;
+            uaddr_t end = start + task->phdrs[i].p_memsz;
+            // 該当のセグメントを探す
+            if (start <= e_entry && e_entry < end) {
+                phdr = &task->phdrs[i];
+                offset = e_entry_align_down - start;
+            }
+        }
+
+        // 物理ページ取得
+        pfn_t pfn_or_err = sys_pm_alloc(task->tid, PAGE_SIZE, 0);
+        if (IS_ERROR(pfn_or_err)) {
+            return pfn_or_err;
+        }
+        // 物理アドレスに変換
+        paddr_t paddr = PFN2PADDR(pfn_or_err);
+
+        static __aligned(PAGE_SIZE) uint8_t tmp_page[PAGE_SIZE];
+
+        ASSERT_OK(sys_vm_unmap(sys_task_self(), (uaddr_t) tmp_page));
+        // uaddrはページフォルトが発生したプロセスのアドレス空間であるためvmサーバーから直接アクセスは出来ないので
+        // vmサーバーのアドレス内にtmp_pageを作成してそれを介して物理ページに一度読み込みを行っている。
+        ASSERT_OK(sys_vm_map(sys_task_self(), (uaddr_t) tmp_page, paddr, PAGE_READABLE | PAGE_WRITABLE));
+
+        size_t copy_len = MIN(PAGE_SIZE, phdr->p_filesz - offset);
+        bootfs_read(file, phdr->p_offset + offset, tmp_page, copy_len);
+
+        unsigned attrs = 0;
+        attrs |= (phdr->p_flags & PF_R) ? PAGE_READABLE : 0;
+        attrs |= (phdr->p_flags & PF_W) ? PAGE_WRITABLE : 0;
+        attrs |= (phdr->p_flags & PF_X) ? PAGE_EXECUTABLE : 0;
+
+        ASSERT_OK(sys_vm_map(task->tid, e_entry_align_down, paddr, attrs));
+    }
+    INFO("done creating process");
+
     // タスク管理構造体をタスクIDテーブルに登録する。
     tasks[task->tid - 1] = task;
     return task->tid;
