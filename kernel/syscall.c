@@ -391,6 +391,24 @@ long handle_syscall(long a0, long a1, long a2, long a3, long a4, long n) {
         case SYS_SHUTDOWN:
             ret = sys_shutdown();
             break;
+        case SYS_FORK:
+            INFO("current task name: %s, pc: %x", CURRENT_TASK->name, CURRENT_TASK->arch.sp);
+            task_t parent_tid = CURRENT_TASK->tid;
+            char *process_name = "child_process";
+
+            // pagerタスクは常にvm
+            struct task *pager_task = task_find((task_t)1);
+            if (!pager_task) {
+                ret = ERR_INVALID_ARG;
+            }
+            task_t tid_or_err = task_create(process_name, *(uaddr_t *) CURRENT_TASK->arch.sp, pager_task);
+            INFO("CURRENT_TASK: %s, tid_or_err: %d", CURRENT_TASK->name, tid_or_err);
+            if (CURRENT_TASK->tid == parent_tid) {
+                ret = 1;
+            } else {
+                ret = 0;
+            }
+            break;
         default:
             ret = ERR_INVALID_ARG;
     }

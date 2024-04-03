@@ -27,6 +27,8 @@ static struct task *scheduler(void) {
     return IDLE_TASK;  // 実行するタスクがない場合はアイドルタスクを実行する。
 }
 
+void debug_log(struct task *task);
+
 // タスク管理構造体を初期化する。
 static error_t init_task_struct(struct task *task, task_t tid, const char *name,
                                 vaddr_t ip, struct task *pager,
@@ -49,6 +51,12 @@ static error_t init_task_struct(struct task *task, task_t tid, const char *name,
     if (err != OK) {
         return err;
     }
+    if (strcmp(task->name, "fork") == 0) {
+        debug_log(task);
+    }
+    if (strcmp(task->name, "child_process") == 0) {
+        debug_log(task);
+    }
 
     err = arch_task_init(task, ip, kernel_entry, arg);
     if (err != OK) {
@@ -65,6 +73,22 @@ static error_t init_task_struct(struct task *task, task_t tid, const char *name,
         task->message_types_can_send[i] = true;
     }
     return OK;
+}
+
+void debug_log(struct task *task) {
+        // page_faultが起きるvaddr=8000ae92のマッピング情報を調べる
+        uint32_t *first_table = (uint32_t *)task->vm.table;
+        // 1段目のページテーブルエントリ
+        uint32_t *first_entry = first_table + 512;
+        INFO("%s process table: %x, entry address: %x, first level entry: %x", task->name, first_table, first_entry, *first_entry);
+
+        // // 2段目のページテーブル
+        uint32_t *second_table = (uint32_t *)((*first_entry >> 10) << 12);
+        uint32_t *second_entry = second_table + 10;
+        INFO("%s process table: %x, entry address: %x, second level entry: %x", task->name, second_table, second_entry, *second_entry);
+
+        uint32_t *paddr = (uint32_t *)((*second_entry >> 10) << 12) + 3730;
+        INFO("%s process table, address: %x, content: %x", task->name, paddr, *paddr);
 }
 
 // 自発的なタスク切り替えを行う。もし実行可能なタスクが実行中タスク以外にない場合は、即座に

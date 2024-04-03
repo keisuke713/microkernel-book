@@ -237,6 +237,7 @@ void handle_page_fault(vaddr_t vaddr, vaddr_t ip, unsigned fault) {
     if (!arch_is_mappable_uaddr(vaddr)) {
         WARN("%s: page fault at unmappable vaddr: vaddr=%p, ip=%p",
              CURRENT_TASK->name, vaddr, ip);
+        for(;;);
         task_exit(EXP_INVALID_UADDR);
     }
 
