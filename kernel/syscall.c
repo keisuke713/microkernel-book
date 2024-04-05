@@ -392,22 +392,25 @@ long handle_syscall(long a0, long a1, long a2, long a3, long a4, long n) {
             ret = sys_shutdown();
             break;
         case SYS_FORK:
-            INFO("current task name: %s, pc: %x", CURRENT_TASK->name, CURRENT_TASK->arch.sp);
-            task_t parent_tid = CURRENT_TASK->tid;
-            char *process_name = "child_process";
-
-            // pagerタスクは常にvm
-            struct task *pager_task = task_find((task_t)1);
-            if (!pager_task) {
+            // 再起的に作られるのを防ぐためtidが11より大きい場合は終了
+            if (CURRENT_TASK->tid > 11) {
                 ret = ERR_INVALID_ARG;
+                break;
             }
-            task_t tid_or_err = task_create(process_name, *(uaddr_t *) CURRENT_TASK->arch.sp, pager_task);
-            INFO("CURRENT_TASK: %s, tid_or_err: %d", CURRENT_TASK->name, tid_or_err);
-            if (CURRENT_TASK->tid == parent_tid) {
-                ret = 1;
-            } else {
-                ret = 0;
+
+            struct task *pager = CURRENT_TASK->pager;
+            if (!pager) {
+                PANIC("%s: unexpected error", CURRENT_TASK->name);
             }
+            struct message m;
+            m.type = SPAWN_TASK_MSG;
+            strcpy_safe(m.spawn_task.name, sizeof(m.spawn_task.name), CURRENT_TASK->name);
+            error_t err = ipc(pager, pager->tid, (__user struct message *) &m, IPC_CALL | IPC_KERNEL);
+
+            if (err != OK || m.type != SPAWN_TASK_REPLY_MSG) {
+                task_exit(EXP_INVALID_PAGER_REPLY);
+            }
+            ret = 1;
             break;
         default:
             ret = ERR_INVALID_ARG;

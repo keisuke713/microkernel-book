@@ -129,7 +129,9 @@ void main(void) {
 
                 m.type = SPAWN_TASK_REPLY_MSG;
                 m.spawn_task_reply.task = task_or_err;
-                ipc_reply(m.src, &m);
+                // ipc_reply(m.src, &m);
+                // 暫定的。通常のアプリケーションを起動するときにもwarnを吐くようになってしまうので別のメッセージタイプを用意する必要あり？
+                ipc_reply(task_or_err, &m);
                 break;
             }
             case DESTROY_TASK_MSG: {
