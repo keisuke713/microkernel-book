@@ -129,9 +129,7 @@ void main(void) {
 
                 m.type = SPAWN_TASK_REPLY_MSG;
                 m.spawn_task_reply.task = task_or_err;
-                // ipc_reply(m.src, &m);
-                // 暫定的。通常のアプリケーションを起動するときにもwarnを吐くようになってしまうので別のメッセージタイプを用意する必要あり？
-                ipc_reply(task_or_err, &m);
+                ipc_reply(m.src, &m);
                 break;
             }
             case DESTROY_TASK_MSG: {
@@ -198,6 +196,31 @@ void main(void) {
                         WARN("unknown exception type %d", m.exception.reason);
                         break;
                 }
+                break;
+            }
+            case FORK_TASK_MSG: {
+                char name[sizeof(m.fork_task.name)];
+                strcpy_safe(name, sizeof(name), m.fork_task.name);
+
+                struct bootfs_file *file = bootfs_open(name);
+                if (!file) {
+                    ipc_reply_err(m.src, ERR_NOT_FOUND);
+                    break;
+                }
+
+                task_t task_or_err = task_spawn(file);
+                if (IS_ERROR(task_or_err)) {
+                    ipc_reply_err(m.src, task_or_err);
+                    break;
+                }
+
+                m.type = FORK_TASK_REPLY_MSG;
+                struct task *task = task_find(m.page_fault.task);
+                ASSERT(task);
+                ASSERT(task->pager == task_self());
+                ASSERT(m.page_fault.task == task->tid);
+
+                ipc_reply(task->tid, &m);
                 break;
             }
             case PAGE_FAULT_MSG: {

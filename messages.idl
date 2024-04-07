@@ -71,6 +71,8 @@ oneway task_destroyed(task: task);
 rpc vm_map_physical(paddr: paddr, size: size, map_flags: int) -> (uaddr: uaddr);
 // 動的に物理メモリ領域を割り当てる。動的なメモリ領域を割り当てるために使用。
 rpc vm_alloc_physical(size: size, alloc_flags: int, map_flags: int) -> (uaddr: uaddr, paddr: paddr);
+// プロセスのコピー
+rpc fork_task(task: task, name: char[32]) -> ();
 
 //
 // ブロックデバイスドライバサーバ
