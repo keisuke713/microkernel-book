@@ -324,6 +324,28 @@ static task_t sys_find_task(__user const char *name) {
     return 0;
 }
 
+static task_t sys_fork() {
+    // 再起的に作られるのを防ぐためtidが11より大きい場合は終了
+    if (CURRENT_TASK->tid > 11) {
+        return ERR_INVALID_ARG;
+    }
+
+    struct task *pager = CURRENT_TASK->pager;
+    if (!pager) {
+        PANIC("%s: unexpected error", CURRENT_TASK->name);
+    }
+    struct message m;
+    m.type = FORK_TASK_MSG;
+    m.fork_task.task = CURRENT_TASK->tid;
+    strcpy_safe(m.fork_task.name, sizeof(m.fork_task.name), CURRENT_TASK->name);
+    error_t err = ipc(pager, pager->tid, (__user struct message *) &m, IPC_CALL | IPC_KERNEL);
+
+    if (err != OK || m.type != FORK_TASK_REPLY_MSG) {
+        task_exit(EXP_INVALID_PAGER_REPLY);
+    }
+    return 1;
+}
+
 // コンピューターの電源を切る。
 __noreturn static int sys_shutdown(void) {
     arch_shutdown();
@@ -392,26 +414,7 @@ long handle_syscall(long a0, long a1, long a2, long a3, long a4, long n) {
             ret = sys_shutdown();
             break;
         case SYS_FORK:
-            // 再起的に作られるのを防ぐためtidが11より大きい場合は終了
-            if (CURRENT_TASK->tid > 11) {
-                ret = ERR_INVALID_ARG;
-                break;
-            }
-
-            struct task *pager = CURRENT_TASK->pager;
-            if (!pager) {
-                PANIC("%s: unexpected error", CURRENT_TASK->name);
-            }
-            struct message m;
-            m.type = FORK_TASK_MSG;
-            m.fork_task.task = CURRENT_TASK->tid;
-            strcpy_safe(m.fork_task.name, sizeof(m.fork_task.name), CURRENT_TASK->name);
-            error_t err = ipc(pager, pager->tid, (__user struct message *) &m, IPC_CALL | IPC_KERNEL);
-
-            if (err != OK || m.type != FORK_TASK_REPLY_MSG) {
-                task_exit(EXP_INVALID_PAGER_REPLY);
-            }
-            ret = 1;
+            ret = sys_fork();
             break;
         default:
             ret = ERR_INVALID_ARG;
