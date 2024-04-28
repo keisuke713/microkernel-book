@@ -199,29 +199,13 @@ void main(void) {
                 break;
             }
             case FORK_TASK_MSG: {
-                char name[sizeof(m.fork_task.name)];
-                strcpy_safe(name, sizeof(name), m.fork_task.name);
-
-                struct bootfs_file *file = bootfs_open(name);
-                if (!file) {
-                    ipc_reply_err(m.src, ERR_NOT_FOUND);
-                    break;
-                }
-
-                task_t task_or_err = task_spawn(file);
-                if (IS_ERROR(task_or_err)) {
-                    ipc_reply_err(m.src, task_or_err);
-                    break;
-                }
+                INFO("fork message");
+                task_t parent_id = m.fork_task.parent;
+                task_t child_id = m.fork_task.child;
+                task_fork(parent_id, child_id);
 
                 m.type = FORK_TASK_REPLY_MSG;
-                struct task *task = task_find(m.page_fault.task);
-                ASSERT(task);
-                ASSERT(task->pager == task_self());
-                ASSERT(m.page_fault.task == task->tid);
-
-                ipc_reply(task->tid, &m);
-                break;
+                ipc_reply(parent_id, &m);
             }
             case PAGE_FAULT_MSG: {
                 if (m.src != FROM_KERNEL) {

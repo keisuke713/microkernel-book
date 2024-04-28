@@ -102,8 +102,8 @@ struct vm_alloc_physical_reply_fields {
 };
 
 struct fork_task_fields {
-    task_t task;
-    char name[32];
+    task_t parent;
+    task_t child;
 };
 struct fork_task_reply_fields {
 };
