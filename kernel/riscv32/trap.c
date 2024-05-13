@@ -116,6 +116,7 @@ static void handle_page_fault_trap(struct riscv32_trap_frame *frame) {
     } else {
         // カーネルモードでのページフォルトは致命的なエラーとして扱う。
         if ((reason & PAGE_FAULT_USER) == 0) {
+            INFO("CURRENT_TASK: %d, vaddr: %x", CURRENT_TASK->tid, vaddr);
             PANIC("page fault in kernel: vaddr=%p, sepc=%p, reason=%x", vaddr,
                   sepc, reason);
         }

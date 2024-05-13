@@ -1,3 +1,3 @@
-objs-y += printf.o syscall.o malloc.o init.o ipc.o task.o driver.o dmabuf.o
+objs-y += printf.o syscall.o malloc.o init.o ipc.o task.o driver.o dmabuf.o fork.o
 subdirs-y += $(ARCH) virtio
 global-cflags-y += -I$(top_dir)/libs/user/arch/$(ARCH)

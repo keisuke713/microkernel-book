@@ -7,6 +7,7 @@
 #include "printk.h"
 #include "task.h"
 #include <libs/common/string.h>
+#include "riscv32/switch.h"
 
 // ユーザー空間からのメモリコピー。通常のmemcpyと異なり、コピー中にページフォルトが発生した場合
 // には、カーネルランドではなくユーザータスクで発生したページフォルトとして処理する。
@@ -324,6 +325,38 @@ static task_t sys_find_task(__user const char *name) {
     return 0;
 }
 
+static task_t sys_fork() {
+    struct task *pager = CURRENT_TASK->pager;
+    if (!pager) {
+        PANIC("%s: unexpected error", CURRENT_TASK->name);
+    }
+    char namebuf[TASK_NAME_LEN];
+    memcpy((void *)namebuf, (void *)CURRENT_TASK->name, sizeof(namebuf));
+    // タスクの初期化.エントリーポイントを含むレジスタの処理状態は親プロセスをコピーするので一旦zero値を渡している
+    task_t child_id = task_create(namebuf, (uaddr_t) 0, pager);
+    struct task *child = task_find(child_id);
+
+    // カーネルスタックのコピー.親のタスクの実行状態がコピーされるはず
+    memcpy((void *)child->arch.sp_bottom, (void *)CURRENT_TASK->arch.sp_bottom, KERNEL_STACK_SIZE);
+    // 子プロセスのspを親と合わせる
+    paddr_t diff = CURRENT_TASK->arch.sp_top - CURRENT_TASK->arch.sp;
+    child->arch.sp = child->arch.sp_top - diff;
+    INFO("CURRENT_TASK->arch.sp: %x, CURRENT_TASK->arch.sp_bottom: %x, CURRENT_TASK->arch.sp_top: %x", CURRENT_TASK->arch.sp, CURRENT_TASK->arch.sp_bottom, CURRENT_TASK->arch.sp_top);
+    INFO("child->arch.sp: %x, child->arch.sp_bottom: %x, child->arch.sp_top: %x", child->arch.sp, child->arch.sp_bottom, child->arch.sp_top);
+
+    // 親タスクで使われているメモリのコピー
+    struct message m;
+    m.type = FORK_TASK_MSG;
+    m.fork_task.parent = CURRENT_TASK->tid;
+    m.fork_task.child = child_id;
+    error_t err = ipc(pager, pager->tid, (__user struct message *) &m, IPC_CALL | IPC_KERNEL);
+    if (err != OK || m.type != FORK_TASK_REPLY_MSG) {
+        task_exit(EXP_INVALID_PAGER_REPLY);
+    }
+
+    return 1;
+}
+
 // コンピューターの電源を切る。
 __noreturn static int sys_shutdown(void) {
     arch_shutdown();
@@ -390,6 +423,9 @@ long handle_syscall(long a0, long a1, long a2, long a3, long a4, long n) {
             break;
         case SYS_SHUTDOWN:
             ret = sys_shutdown();
+            break;
+        case SYS_FORK:
+            ret = sys_fork();
             break;
         default:
             ret = ERR_INVALID_ARG;

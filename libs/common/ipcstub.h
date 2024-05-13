@@ -101,6 +101,13 @@ struct vm_alloc_physical_reply_fields {
     paddr_t paddr;
 };
 
+struct fork_task_fields {
+    task_t parent;
+    task_t child;
+};
+struct fork_task_reply_fields {
+};
+
 struct blk_read_fields {
     unsigned sector;
     size_t offset;
@@ -296,51 +303,53 @@ struct interrupt_reply_fields {
 #define VM_MAP_PHYSICAL_REPLY_MSG 23
 #define VM_ALLOC_PHYSICAL_MSG 24
 #define VM_ALLOC_PHYSICAL_REPLY_MSG 25
-#define BLK_READ_MSG 26
-#define BLK_READ_REPLY_MSG 27
-#define BLK_WRITE_MSG 28
-#define BLK_WRITE_REPLY_MSG 29
-#define NET_OPEN_MSG 30
-#define NET_OPEN_REPLY_MSG 31
-#define NET_RECV_MSG 32
-#define NET_SEND_MSG 33
-#define NET_SEND_REPLY_MSG 34
-#define FS_OPEN_MSG 35
-#define FS_OPEN_REPLY_MSG 36
-#define FS_CLOSE_MSG 37
-#define FS_CLOSE_REPLY_MSG 38
-#define FS_READ_MSG 39
-#define FS_READ_REPLY_MSG 40
-#define FS_WRITE_MSG 41
-#define FS_WRITE_REPLY_MSG 42
-#define FS_READDIR_MSG 43
-#define FS_READDIR_REPLY_MSG 44
-#define FS_MKFILE_MSG 45
-#define FS_MKFILE_REPLY_MSG 46
-#define FS_MKDIR_MSG 47
-#define FS_MKDIR_REPLY_MSG 48
-#define FS_DELETE_MSG 49
-#define FS_DELETE_REPLY_MSG 50
-#define TCPIP_CONNECT_MSG 51
-#define TCPIP_CONNECT_REPLY_MSG 52
-#define TCPIP_CONNECT_PASSIVE_MSG 53
-#define TCPIP_CONNECT_PASSIVE_REPLY_MSG 54
-#define TCPIP_CLOSE_ACTIVE_MSG 55
-#define TCPIP_CLOSE_ACTIVE_REPLY_MSG 56
-#define TCPIP_CLOSE_MSG 57
-#define TCPIP_CLOSE_REPLY_MSG 58
-#define TCPIP_WRITE_MSG 59
-#define TCPIP_WRITE_REPLY_MSG 60
-#define TCPIP_READ_MSG 61
-#define TCPIP_READ_REPLY_MSG 62
-#define TCPIP_DNS_RESOLVE_MSG 63
-#define TCPIP_DNS_RESOLVE_REPLY_MSG 64
-#define TCPIP_DATA_MSG 65
-#define TCPIP_CLOSED_MSG 66
-#define TWICE_MSG 67
-#define TWICE_REPLY_MSG 68
-#define INTERRUPT_MSG 69
-#define INTERRUPT_REPLY_MSG 70
+#define FORK_TASK_MSG 26
+#define FORK_TASK_REPLY_MSG 27
+#define BLK_READ_MSG 28
+#define BLK_READ_REPLY_MSG 29
+#define BLK_WRITE_MSG 30
+#define BLK_WRITE_REPLY_MSG 31
+#define NET_OPEN_MSG 32
+#define NET_OPEN_REPLY_MSG 33
+#define NET_RECV_MSG 34
+#define NET_SEND_MSG 35
+#define NET_SEND_REPLY_MSG 36
+#define FS_OPEN_MSG 37
+#define FS_OPEN_REPLY_MSG 38
+#define FS_CLOSE_MSG 39
+#define FS_CLOSE_REPLY_MSG 40
+#define FS_READ_MSG 41
+#define FS_READ_REPLY_MSG 42
+#define FS_WRITE_MSG 43
+#define FS_WRITE_REPLY_MSG 44
+#define FS_READDIR_MSG 45
+#define FS_READDIR_REPLY_MSG 46
+#define FS_MKFILE_MSG 47
+#define FS_MKFILE_REPLY_MSG 48
+#define FS_MKDIR_MSG 49
+#define FS_MKDIR_REPLY_MSG 50
+#define FS_DELETE_MSG 51
+#define FS_DELETE_REPLY_MSG 52
+#define TCPIP_CONNECT_MSG 53
+#define TCPIP_CONNECT_REPLY_MSG 54
+#define TCPIP_CONNECT_PASSIVE_MSG 55
+#define TCPIP_CONNECT_PASSIVE_REPLY_MSG 56
+#define TCPIP_CLOSE_ACTIVE_MSG 57
+#define TCPIP_CLOSE_ACTIVE_REPLY_MSG 58
+#define TCPIP_CLOSE_MSG 59
+#define TCPIP_CLOSE_REPLY_MSG 60
+#define TCPIP_WRITE_MSG 61
+#define TCPIP_WRITE_REPLY_MSG 62
+#define TCPIP_READ_MSG 63
+#define TCPIP_READ_REPLY_MSG 64
+#define TCPIP_DNS_RESOLVE_MSG 65
+#define TCPIP_DNS_RESOLVE_REPLY_MSG 66
+#define TCPIP_DATA_MSG 67
+#define TCPIP_CLOSED_MSG 68
+#define TWICE_MSG 69
+#define TWICE_REPLY_MSG 70
+#define INTERRUPT_MSG 71
+#define INTERRUPT_REPLY_MSG 72
 
 //
 //  各種マクロの定義
@@ -371,6 +380,8 @@ struct interrupt_reply_fields {
     struct vm_map_physical_reply_fields vm_map_physical_reply; \
     struct vm_alloc_physical_fields vm_alloc_physical; \
     struct vm_alloc_physical_reply_fields vm_alloc_physical_reply; \
+    struct fork_task_fields fork_task; \
+    struct fork_task_reply_fields fork_task_reply; \
     struct blk_read_fields blk_read; \
     struct blk_read_reply_fields blk_read_reply; \
     struct blk_write_fields blk_write; \
@@ -417,7 +428,7 @@ struct interrupt_reply_fields {
     struct interrupt_fields interrupt; \
     struct interrupt_reply_fields interrupt_reply; \
 
-#define IPCSTUB_MSGID_MAX 68
+#define IPCSTUB_MSGID_MAX 72
 #define IPCSTUB_MSGID2STR \
     (const char *[]){ \
      \
@@ -461,74 +472,77 @@ struct interrupt_reply_fields {
         [24] = "vm_alloc_physical", \
         [25] = "vm_alloc_physical_reply", \
      \
-        [26] = "blk_read", \
-        [27] = "blk_read_reply", \
+        [26] = "fork_task", \
+        [27] = "fork_task_reply", \
      \
-        [28] = "blk_write", \
-        [29] = "blk_write_reply", \
+        [28] = "blk_read", \
+        [29] = "blk_read_reply", \
      \
-        [30] = "net_open", \
-        [31] = "net_open_reply", \
+        [30] = "blk_write", \
+        [31] = "blk_write_reply", \
      \
-        [32] = "net_recv", \
+        [32] = "net_open", \
+        [33] = "net_open_reply", \
      \
-        [33] = "net_send", \
-        [34] = "net_send_reply", \
+        [34] = "net_recv", \
      \
-        [35] = "fs_open", \
-        [36] = "fs_open_reply", \
+        [35] = "net_send", \
+        [36] = "net_send_reply", \
      \
-        [37] = "fs_close", \
-        [38] = "fs_close_reply", \
+        [37] = "fs_open", \
+        [38] = "fs_open_reply", \
      \
-        [39] = "fs_read", \
-        [40] = "fs_read_reply", \
+        [39] = "fs_close", \
+        [40] = "fs_close_reply", \
      \
-        [41] = "fs_write", \
-        [42] = "fs_write_reply", \
+        [41] = "fs_read", \
+        [42] = "fs_read_reply", \
      \
-        [43] = "fs_readdir", \
-        [44] = "fs_readdir_reply", \
+        [43] = "fs_write", \
+        [44] = "fs_write_reply", \
      \
-        [45] = "fs_mkfile", \
-        [46] = "fs_mkfile_reply", \
+        [45] = "fs_readdir", \
+        [46] = "fs_readdir_reply", \
      \
-        [47] = "fs_mkdir", \
-        [48] = "fs_mkdir_reply", \
+        [47] = "fs_mkfile", \
+        [48] = "fs_mkfile_reply", \
      \
-        [49] = "fs_delete", \
-        [50] = "fs_delete_reply", \
+        [49] = "fs_mkdir", \
+        [50] = "fs_mkdir_reply", \
      \
-        [51] = "tcpip_connect", \
-        [52] = "tcpip_connect_reply", \
+        [51] = "fs_delete", \
+        [52] = "fs_delete_reply", \
      \
-        [53] = "tcpip_connect_passive", \
-        [54] = "tcpip_connect_passive_reply", \
+        [53] = "tcpip_connect", \
+        [54] = "tcpip_connect_reply", \
      \
-        [55] = "tcpip_close_active", \
-        [56] = "tcpip_close_active_reply", \
+        [55] = "tcpip_connect_passive", \
+        [56] = "tcpip_connect_passive_reply", \
      \
-        [57] = "tcpip_close", \
-        [58] = "tcpip_close_reply", \
+        [57] = "tcpip_close_active", \
+        [58] = "tcpip_close_active_reply", \
      \
-        [59] = "tcpip_write", \
-        [60] = "tcpip_write_reply", \
+        [59] = "tcpip_close", \
+        [60] = "tcpip_close_reply", \
      \
-        [61] = "tcpip_read", \
-        [62] = "tcpip_read_reply", \
+        [61] = "tcpip_write", \
+        [62] = "tcpip_write_reply", \
      \
-        [63] = "tcpip_dns_resolve", \
-        [64] = "tcpip_dns_resolve_reply", \
+        [63] = "tcpip_read", \
+        [64] = "tcpip_read_reply", \
      \
-        [65] = "tcpip_data", \
+        [65] = "tcpip_dns_resolve", \
+        [66] = "tcpip_dns_resolve_reply", \
      \
-        [66] = "tcpip_closed", \
+        [67] = "tcpip_data", \
      \
-        [67] = "twice", \
-        [68] = "twice_reply", \
+        [68] = "tcpip_closed", \
      \
-        [69] = "interrupt", \
-        [70] = "interrupt_reply", \
+        [69] = "twice", \
+        [70] = "twice_reply", \
+     \
+        [71] = "interrupt", \
+        [72] = "interrupt_reply", \
      \
     }
 
@@ -632,6 +646,14 @@ struct interrupt_reply_fields {
     _Static_assert( \
         sizeof(struct vm_alloc_physical_reply_fields) < 4096, \
         "'vm_alloc_physical_reply' message is too large, should be less than 4096 bytes" \
+    ); \
+    _Static_assert( \
+        sizeof(struct fork_task_fields) < 4096, \
+        "'fork_task' message is too large, should be less than 4096 bytes" \
+    ); \
+    _Static_assert( \
+        sizeof(struct fork_task_reply_fields) < 4096, \
+        "'fork_task_reply' message is too large, should be less than 4096 bytes" \
     ); \
     _Static_assert( \
         sizeof(struct blk_read_fields) < 4096, \

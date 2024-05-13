@@ -101,3 +101,8 @@ __noreturn void sys_shutdown(void) {
 task_t sys_find_task(const char *name) {
     return arch_syscall((uintptr_t) name, 0, 0, 0, 0, SYS_FIND_TASK);
 }
+
+// 実行中のプロセスのコピーを作成する
+int sys_fork() {
+    return arch_syscall(0, 0, 0, 0, 0, SYS_FORK);
+}
