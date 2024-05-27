@@ -155,7 +155,11 @@ task_t task_create(const char *name, uaddr_t ip, struct task *pager) {
     }
 
     list_push_back(&active_tasks, &task->next);
-    task_resume(task);
+    // task_resume(task);
+    // forkで作られるプログラムはエントリーポイント0x00000000が渡されているのですぐにはrunnableにはしない
+    if (tid < 12) {
+        task_resume(task);
+    }
     TRACE("created a task \"%s\" (tid=%d)", name, tid);
     return tid;
 }

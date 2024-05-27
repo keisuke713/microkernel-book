@@ -60,23 +60,36 @@ void task_fork(task_t parent_id, task_t child_id) {
     // ELFセグメントを仮想アドレス空間にマップする。
     strcpy_safe(child->name, sizeof(child->name), parent->file->name);
 
+    static __aligned(PAGE_SIZE) uint8_t tmp_src_page[PAGE_SIZE];
+    static __aligned(PAGE_SIZE) uint8_t tmp_dst_page[PAGE_SIZE];
     // 親のメモリをコピーする
     for (int i=0; i<parent->phys_virt_mapping_list; i++) {
         paddr_t paddr = parent->phys_virt_mapping_list[i].paddr;
         uaddr_t uaddr = parent->phys_virt_mapping_list[i].uaddr;
+
+        if (paddr == (paddr_t)0) {
+            break;;
+        }
+
 
         pfn_t pfn_or_err = sys_pm_alloc(child->tid, PAGE_SIZE, 0);
         if (IS_ERROR(pfn_or_err)) {
             PANIC("%d", pfn_or_err);
         }
 
-        paddr_t paddr2 = PFN2PADDR(pfn_or_err);
+        // コピー先の物理アドレス
+        paddr_t dst_paddr = PFN2PADDR(pfn_or_err);
 
-        static __aligned(PAGE_SIZE) uint8_t tmp_page[PAGE_SIZE];
-        ASSERT_OK(sys_vm_unmap(sys_task_self(), (uaddr_t) tmp_page));
-        ASSERT_OK(sys_vm_map(sys_task_self(), (uaddr_t) tmp_page, paddr,
+        ASSERT_OK(sys_vm_unmap(sys_task_self(), (uaddr_t) tmp_src_page));
+        // tmp_src_page経由でpaddrにアクセスできるように数
+        ASSERT_OK(sys_vm_map(sys_task_self(), (uaddr_t) tmp_src_page, paddr,
                     PAGE_READABLE | PAGE_WRITABLE));
-        memcpy((void *) tmp_page, (void *) paddr, PAGE_SIZE);
+
+        ASSERT_OK(sys_vm_unmap(sys_task_self(), (uaddr_t) tmp_dst_page));
+        // tmp_dst_page経由でpaddrにアクセスできるように数
+        ASSERT_OK(sys_vm_map(sys_task_self(), (uaddr_t) tmp_dst_page, dst_paddr,
+                    PAGE_READABLE | PAGE_WRITABLE));
+        memcpy((void *) tmp_dst_page, (void *)tmp_src_page, PAGE_SIZE);
 
         // 一旦全部許可
         unsigned attrs = 0;
@@ -85,7 +98,7 @@ void task_fork(task_t parent_id, task_t child_id) {
         attrs |= PAGE_EXECUTABLE;
 
         // ページをマップする。
-        ASSERT_OK(sys_vm_map(child->tid, uaddr, paddr, attrs));
+        ASSERT_OK(sys_vm_map(child->tid, uaddr, dst_paddr, attrs));
     }
 
     // maybe static

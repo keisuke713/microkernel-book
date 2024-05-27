@@ -7,6 +7,21 @@
 #include <kernel/memory.h>
 #include <kernel/printk.h>
 #include <kernel/task.h>
+#include "handler.h"
+
+__noreturn void fork_entry(struct riscv32_trap_frame *frame) {
+    mp_unlock();
+    write_sepc(frame->pc); // sretした後に戻るアドレス.ecallの次の命令
+
+    uint32_t sstatus = read_sstatus();
+    sstatus &= ~SSTATUS_SPP;
+    sstatus |= SSTATUS_SPIE;
+    write_sstatus(sstatus);
+
+    riscv32_fork_trap_handler(frame);
+
+    UNREACHABLE();
+}
 
 // ユーザータスクへの最初のコンテキストスイッチ時に呼び出される関数
 __noreturn void riscv32_user_entry(uint32_t ip) {

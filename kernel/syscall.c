@@ -325,6 +325,8 @@ static task_t sys_find_task(__user const char *name) {
     return 0;
 }
 
+void riscv32_fork_entry_trampoline(void);
+
 static task_t sys_fork() {
     struct task *pager = CURRENT_TASK->pager;
     if (!pager) {
@@ -333,16 +335,9 @@ static task_t sys_fork() {
     char namebuf[TASK_NAME_LEN];
     memcpy((void *)namebuf, (void *)CURRENT_TASK->name, sizeof(namebuf));
     // タスクの初期化.エントリーポイントを含むレジスタの処理状態は親プロセスをコピーするので一旦zero値を渡している
-    task_t child_id = task_create(namebuf, (uaddr_t) 0, pager);
+    task_t child_id = task_create(namebuf, (uaddr_t) 0x00000000, pager);
     struct task *child = task_find(child_id);
 
-    // カーネルスタックのコピー.親のタスクの実行状態がコピーされるはず
-    memcpy((void *)child->arch.sp_bottom, (void *)CURRENT_TASK->arch.sp_bottom, KERNEL_STACK_SIZE);
-    // 子プロセスのspを親と合わせる
-    paddr_t diff = CURRENT_TASK->arch.sp_top - CURRENT_TASK->arch.sp;
-    child->arch.sp = child->arch.sp_top - diff;
-    INFO("CURRENT_TASK->arch.sp: %x, CURRENT_TASK->arch.sp_bottom: %x, CURRENT_TASK->arch.sp_top: %x", CURRENT_TASK->arch.sp, CURRENT_TASK->arch.sp_bottom, CURRENT_TASK->arch.sp_top);
-    INFO("child->arch.sp: %x, child->arch.sp_bottom: %x, child->arch.sp_top: %x", child->arch.sp, child->arch.sp_bottom, child->arch.sp_top);
 
     // 親タスクで使われているメモリのコピー
     struct message m;
@@ -354,7 +349,35 @@ static task_t sys_fork() {
         task_exit(EXP_INVALID_PAGER_REPLY);
     }
 
-    return 1;
+    // あらかじめ handle_syscall_trap 関数で親プロセスのレジスタ値をコピーしているのでそれをchildにもコピーする
+    memcpy(&child->arch.saved_reges, &CURRENT_TASK->arch.saved_reges, sizeof(struct riscv32_trap_frame));
+
+    // ecall 命令の次の命令に戻るようにする
+    child->arch.saved_reges.pc += 4;
+    INFO("child->arch.saved_reges.pc: %x, addr: %x", child->arch.saved_reges.pc, &child->arch.saved_reges);
+    // sys_fork() システムコールの戻り値
+    child->arch.saved_reges.a0 = 0;
+
+    uint32_t sp_top = child->arch.sp_bottom + KERNEL_STACK_SIZE;
+    uint32_t *sp = (uint32_t *) sp_top;
+    *--sp = (uint32_t) &child->arch.saved_reges;
+    *--sp = 0; // s11
+    *--sp = 0; // s10
+    *--sp = 0; // s9
+    *--sp = 0; // s8
+    *--sp = 0; // s7
+    *--sp = 0; // s6
+    *--sp = 0; // s5
+    *--sp = 0; // s4
+    *--sp = 0; // s3
+    *--sp = 0; // s2
+    *--sp = 0; // s1
+    *--sp = 0; // s0
+    *--sp = (uint32_t) riscv32_fork_entry_trampoline; //ra
+
+    task_resume(child);
+
+    return child_id;
 }
 
 // コンピューターの電源を切る。

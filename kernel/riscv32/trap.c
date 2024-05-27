@@ -11,9 +11,13 @@
 #include <kernel/printk.h>
 #include <kernel/syscall.h>
 #include <kernel/task.h>
+#include <libs/common/string.h>
 
 // システムコール
 static void handle_syscall_trap(struct riscv32_trap_frame *frame) {
+    // システムコール発生時のレジスタ値を対比
+    memcpy(&CURRENT_TASK->arch.saved_reges, frame, sizeof(*frame));
+
     // システムコールハンドラを呼び出し、戻り値をa0レジスタに設定
     frame->a0 = handle_syscall(frame->a0, frame->a1, frame->a2, frame->a3,
                                frame->a4, frame->a5);
