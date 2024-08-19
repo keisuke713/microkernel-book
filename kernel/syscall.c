@@ -72,7 +72,7 @@ static task_t sys_task_create(__user const char *name, uaddr_t ip,
     }
 
     // 通常のユーザータスクを作成する場合
-    return task_create(namebuf, ip, pager_task);
+    return task_create(namebuf, ip, pager_task, true);
 }
 
 // HinaVMタスクを生成する。instsはHinaVM命令列、num_instsは命令数、pagerはページャータスク。
@@ -333,9 +333,9 @@ static task_t sys_fork() {
         PANIC("%s: unexpected error", CURRENT_TASK->name);
     }
     char namebuf[TASK_NAME_LEN];
-    memcpy((void *)namebuf, (void *)CURRENT_TASK->name, sizeof(namebuf));
+    strcpy_safe((char *) &namebuf, sizeof(namebuf), "child-process");
     // タスクの初期化.エントリーポイントを含むレジスタの処理状態は親プロセスをコピーするので一旦zero値を渡している
-    task_t child_id = task_create(namebuf, (uaddr_t) 0x00000000, pager);
+    task_t child_id = task_create(namebuf, (uaddr_t) 0x00000000, pager, false);
     struct task *child = task_find(child_id);
 
 
@@ -374,6 +374,7 @@ static task_t sys_fork() {
     *--sp = 0; // s1
     *--sp = 0; // s0
     *--sp = (uint32_t) riscv32_fork_entry_trampoline; //ra
+    child->arch.sp = (uint32_t) sp;
 
     task_resume(child);
 

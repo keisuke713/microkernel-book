@@ -206,6 +206,7 @@ void main(void) {
 
                 m.type = FORK_TASK_REPLY_MSG;
                 ipc_reply(parent_id, &m);
+                break;
             }
             case PAGE_FAULT_MSG: {
                 if (m.src != FROM_KERNEL) {

@@ -23,6 +23,8 @@ struct phys_virt_mapping {
     uaddr_t uaddr;
 };
 
+#define NUM_PHYS_VIRT_MAPPING_MAX 50
+
 // タスク管理構造体
 struct bootfs_file;
 struct task {
@@ -36,7 +38,7 @@ struct task {
     uaddr_t valloc_next;                 // 動的に割り当てられる仮想アドレスの次のアドレス
     char waiting_for[SERVICE_NAME_LEN];  // サービス登録待ちのサービス名
     bool watch_tasks;                    // タスクの終了を監視するかどうか
-    struct phys_virt_mapping phys_virt_mapping_list[50];                    // 仮想アドレスと物理アドレスのマッピング表.一旦決めうちで50
+    struct phys_virt_mapping phys_virt_mapping_list[NUM_PHYS_VIRT_MAPPING_MAX];
     int index; // phys_virt_mapping_listのindex
 };
 

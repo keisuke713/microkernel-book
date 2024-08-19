@@ -30,13 +30,19 @@ void task_fork(task_t parent_id, task_t child_id) {
     }
 
     child->file = parent->file;
-    child->file_header = parent->file_header;
     child->tid = child_id;
     child->pager = task_self();
-    child->ehdr = parent->ehdr;
-    child->phdrs = parent->phdrs;
     child->watch_tasks = parent->watch_tasks;
     strcpy_safe(child->waiting_for, sizeof(child->waiting_for), "");
+    child->index = 0;
+    memset(&child->phys_virt_mapping_list, 0, sizeof(child->phys_virt_mapping_list));
+
+    void *file_header = malloc(4096);
+    bootfs_read(parent->file, 0, file_header, PAGE_SIZE);
+    elf_ehdr_t *ehdr = (elf_ehdr_t *) file_header;
+    child->file_header = file_header;
+    child->ehdr = ehdr;
+    child->phdrs = (elf_phdr_t *) ((uaddr_t) file_header + ehdr->e_phoff);
 
     // 仮想アドレス空間のうち空いている仮想アドレス領域の先頭を探す。仮想アドレスを動的に
     // 割り当てる際にELFセグメントと被らないようにするため。
@@ -63,13 +69,9 @@ void task_fork(task_t parent_id, task_t child_id) {
     static __aligned(PAGE_SIZE) uint8_t tmp_src_page[PAGE_SIZE];
     static __aligned(PAGE_SIZE) uint8_t tmp_dst_page[PAGE_SIZE];
     // 親のメモリをコピーする
-    for (int i=0; i<parent->phys_virt_mapping_list; i++) {
+    for (int i=0; i<parent->index; i++) {
         paddr_t paddr = parent->phys_virt_mapping_list[i].paddr;
         uaddr_t uaddr = parent->phys_virt_mapping_list[i].uaddr;
-
-        if (paddr == (paddr_t)0) {
-            break;;
-        }
 
 
         pfn_t pfn_or_err = sys_pm_alloc(child->tid, PAGE_SIZE, 0);
@@ -155,6 +157,8 @@ task_t task_spawn(struct bootfs_file *file) {
     task->phdrs = (elf_phdr_t *) ((uaddr_t) file_header + ehdr->e_phoff);
     task->watch_tasks = false;
     strcpy_safe(task->waiting_for, sizeof(task->waiting_for), "");
+    task->index = 0;
+    memset(&task->phys_virt_mapping_list, 0, sizeof(task->phys_virt_mapping_list));
 
     // 仮想アドレス空間のうち空いている仮想アドレス領域の先頭を探す。仮想アドレスを動的に
     // 割り当てる際にELFセグメントと被らないようにするため。

@@ -122,12 +122,6 @@ riscv32_trap_handler:
 .align 4
 .global riscv32_fork_trap_handler
 riscv32_fork_trap_handler:
-    // sepcとsstatusを復元する。
-    lw a0,  4 * 0(a0)
-    csrw sepc, a0
-    lw a1, 4 * 1(a0)
-    csrw sstatus, a1
-
     lw ra,  4 * 2(a0)
     lw sp,  4 * 3(a0)
     lw gp,  4 * 4(a0)

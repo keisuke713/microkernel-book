@@ -94,13 +94,14 @@ error_t handle_page_fault(struct task *task, uaddr_t uaddr, uaddr_t ip,
     // ページをマップする。
     ASSERT(phdr->p_filesz <= phdr->p_memsz);
     ASSERT_OK(sys_vm_map(task->tid, uaddr, paddr, attrs));
-    // 一旦forkの親プロセスのみ
-    if (task->tid == 11) {
-        int i = task->index++;
-        struct phys_virt_mapping hoge;
-        hoge.paddr = paddr;
-        hoge.uaddr = uaddr;
-        task->phys_virt_mapping_list[i] = hoge;
+    // 全てのタスクでマッピング情報を保存しておく
+    int i = task->index++;
+    if (i >= NUM_PHYS_VIRT_MAPPING_MAX) {
+        PANIC("too many phys_virt_mapping");
     }
+    struct phys_virt_mapping map_info;
+    map_info.paddr = paddr;
+    map_info.uaddr = uaddr;
+    task->phys_virt_mapping_list[i] = map_info;
     return OK;
 }

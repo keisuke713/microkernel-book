@@ -15,7 +15,7 @@ static void create_first_task(struct bootinfo *bootinfo) {
     }
 
     // 最初のタスク (VMサーバ) を作成する
-    task_t tid = task_create("vm", header->e_entry, NULL);
+    task_t tid = task_create("vm", header->e_entry, NULL, true);
     ASSERT_OK(tid);
     struct task *task = task_find(tid);
 
