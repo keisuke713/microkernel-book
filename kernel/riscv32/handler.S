@@ -119,6 +119,42 @@ riscv32_trap_handler:
     lw sp,  4 * 3(sp)
     sret                // 割り込みハンドラから戻る
 
+.align 4
+.global riscv32_fork_trap_handler
+riscv32_fork_trap_handler:
+    lw ra,  4 * 2(a0)
+    lw sp,  4 * 3(a0)
+    lw gp,  4 * 4(a0)
+    lw tp,  4 * 5(a0)
+    lw t0,  4 * 6(a0)
+    lw t1,  4 * 7(a0)
+    lw t2,  4 * 8(a0)
+    lw t3,  4 * 9(a0)
+    lw t4,  4 * 10(a0)
+    lw t5,  4 * 11(a0)
+    lw t6,  4 * 12(a0)
+    lw a1,  4 * 14(a0)
+    lw a2,  4 * 15(a0)
+    lw a3,  4 * 16(a0)
+    lw a4,  4 * 17(a0)
+    lw a5,  4 * 18(a0)
+    lw a6,  4 * 19(a0)
+    lw a7,  4 * 20(a0)
+    lw s0,  4 * 21(a0)
+    lw s1,  4 * 22(a0)
+    lw s2,  4 * 23(a0)
+    lw s3,  4 * 24(a0)
+    lw s4,  4 * 25(a0)
+    lw s5,  4 * 26(a0)
+    lw s6,  4 * 27(a0)
+    lw s7,  4 * 28(a0)
+    lw s8,  4 * 29(a0)
+    lw s9,  4 * 30(a0)
+    lw s10, 4 * 31(a0)
+    lw s11, 4 * 32(a0)
+    li a0,  0
+    sret                // 割り込みハンドラから戻る
+
 // タイマー割り込みハンドラ。M-modeで実行される。
 .align 4
 .global riscv32_timer_handler

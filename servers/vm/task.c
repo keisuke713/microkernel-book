@@ -20,6 +20,93 @@ struct task *task_find(task_t tid) {
     return tasks[tid - 1];
 }
 
+void task_fork(task_t parent_id, task_t child_id) {
+    struct task *parent = task_find(parent_id);
+
+    // 子のタスクを作る
+    struct task *child = malloc(sizeof(*child));
+    if (!child) {
+        PANIC("too many tasks");
+    }
+
+    child->file = parent->file;
+    child->tid = child_id;
+    child->pager = task_self();
+    child->watch_tasks = parent->watch_tasks;
+    strcpy_safe(child->waiting_for, sizeof(child->waiting_for), "");
+    child->index = 0;
+    memset(&child->phys_virt_mapping_list, 0, sizeof(child->phys_virt_mapping_list));
+
+    void *file_header = malloc(4096);
+    bootfs_read(parent->file, 0, file_header, PAGE_SIZE);
+    elf_ehdr_t *ehdr = (elf_ehdr_t *) file_header;
+    child->file_header = file_header;
+    child->ehdr = ehdr;
+    child->phdrs = (elf_phdr_t *) ((uaddr_t) file_header + ehdr->e_phoff);
+
+    // 仮想アドレス空間のうち空いている仮想アドレス領域の先頭を探す。仮想アドレスを動的に
+    // 割り当てる際にELFセグメントと被らないようにするため。
+    vaddr_t valloc_next = VALLOC_BASE;
+    for (unsigned i = 0; i < child->ehdr->e_phnum; i++) {
+        elf_phdr_t *phdr = &child->phdrs[i];
+        if (phdr->p_type != PT_LOAD) {
+            // メモリ上にないセグメントは無視する。
+            continue;
+        }
+
+        uaddr_t end = ALIGN_UP(phdr->p_vaddr + phdr->p_memsz, PAGE_SIZE);
+        valloc_next = MAX(valloc_next, end);
+    }
+
+    // セグメントの末端が分かったので記録しておく。このアドレスから動的に仮想アドレス領域が
+    // 割り当てられていく。
+    ASSERT(VALLOC_BASE <= valloc_next && valloc_next < VALLOC_END);
+    child->valloc_next = valloc_next;
+
+    // ELFセグメントを仮想アドレス空間にマップする。
+    strcpy_safe(child->name, sizeof(child->name), parent->file->name);
+
+    static __aligned(PAGE_SIZE) uint8_t tmp_src_page[PAGE_SIZE];
+    static __aligned(PAGE_SIZE) uint8_t tmp_dst_page[PAGE_SIZE];
+    // 親のメモリをコピーする
+    for (int i=0; i<parent->index; i++) {
+        paddr_t paddr = parent->phys_virt_mapping_list[i].paddr;
+        uaddr_t uaddr = parent->phys_virt_mapping_list[i].uaddr;
+
+
+        pfn_t pfn_or_err = sys_pm_alloc(child->tid, PAGE_SIZE, 0);
+        if (IS_ERROR(pfn_or_err)) {
+            PANIC("%d", pfn_or_err);
+        }
+
+        // コピー先の物理アドレス
+        paddr_t dst_paddr = PFN2PADDR(pfn_or_err);
+
+        ASSERT_OK(sys_vm_unmap(sys_task_self(), (uaddr_t) tmp_src_page));
+        // tmp_src_page経由でpaddrにアクセスできるように数
+        ASSERT_OK(sys_vm_map(sys_task_self(), (uaddr_t) tmp_src_page, paddr,
+                    PAGE_READABLE | PAGE_WRITABLE));
+
+        ASSERT_OK(sys_vm_unmap(sys_task_self(), (uaddr_t) tmp_dst_page));
+        // tmp_dst_page経由でpaddrにアクセスできるように数
+        ASSERT_OK(sys_vm_map(sys_task_self(), (uaddr_t) tmp_dst_page, dst_paddr,
+                    PAGE_READABLE | PAGE_WRITABLE));
+        memcpy((void *) tmp_dst_page, (void *)tmp_src_page, PAGE_SIZE);
+
+        // 一旦全部許可
+        unsigned attrs = 0;
+        attrs |= PAGE_READABLE;
+        attrs |= PAGE_WRITABLE;
+        attrs |= PAGE_EXECUTABLE;
+
+        // ページをマップする。
+        ASSERT_OK(sys_vm_map(child->tid, uaddr, dst_paddr, attrs));
+    }
+
+    // maybe static
+    tasks[child->tid - 1] = child;
+}
+
 // 指定されたELFファイルからタスクを生成する。成功するとタスクID、失敗するとエラーを返す。
 task_t task_spawn(struct bootfs_file *file) {
     TRACE("launching %s...", file->name);
@@ -70,6 +157,8 @@ task_t task_spawn(struct bootfs_file *file) {
     task->phdrs = (elf_phdr_t *) ((uaddr_t) file_header + ehdr->e_phoff);
     task->watch_tasks = false;
     strcpy_safe(task->waiting_for, sizeof(task->waiting_for), "");
+    task->index = 0;
+    memset(&task->phys_virt_mapping_list, 0, sizeof(task->phys_virt_mapping_list));
 
     // 仮想アドレス空間のうち空いている仮想アドレス領域の先頭を探す。仮想アドレスを動的に
     // 割り当てる際にELFセグメントと被らないようにするため。

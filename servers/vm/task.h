@@ -17,6 +17,14 @@ struct service {
     task_t task;                  // タスクID
 };
 
+// 物理ページと仮想アドレスのマッピング
+struct phys_virt_mapping {
+    paddr_t paddr;
+    uaddr_t uaddr;
+};
+
+#define NUM_PHYS_VIRT_MAPPING_MAX 50
+
 // タスク管理構造体
 struct bootfs_file;
 struct task {
@@ -30,9 +38,12 @@ struct task {
     uaddr_t valloc_next;                 // 動的に割り当てられる仮想アドレスの次のアドレス
     char waiting_for[SERVICE_NAME_LEN];  // サービス登録待ちのサービス名
     bool watch_tasks;                    // タスクの終了を監視するかどうか
+    struct phys_virt_mapping phys_virt_mapping_list[NUM_PHYS_VIRT_MAPPING_MAX];
+    int index; // phys_virt_mapping_listのindex
 };
 
 struct task *task_find(task_t tid);
+void task_fork(task_t parnet_id, task_t child_id);
 task_t task_spawn(struct bootfs_file *file);
 void task_destroy(struct task *task);
 error_t task_destroy_by_tid(task_t tid);

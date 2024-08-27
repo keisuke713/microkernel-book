@@ -1,6 +1,7 @@
 #pragma once
 #include "../asmdefs.h"
 #include <libs/common/types.h>
+#include "../trap.h"
 
 // 仮想アドレス空間上のカーネルメモリ領域の開始アドレス。
 #define KERNEL_BASE 0x80000000
@@ -12,6 +13,7 @@ struct arch_task {
     uint32_t sp;        // 次回実行時に復元されるべきカーネルスタックの値
     uint32_t sp_top;    // カーネルスタックの上端
     paddr_t sp_bottom;  // カーネルスタックの底
+    struct riscv32_trap_frame saved_reges; // 割り込み時のレジスタの状態
 };
 
 // RISC-V特有のページテーブル管理構造体。

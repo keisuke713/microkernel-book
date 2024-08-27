@@ -7,6 +7,7 @@
 #include "printk.h"
 #include "task.h"
 #include <libs/common/string.h>
+#include "riscv32/switch.h"
 
 // ユーザー空間からのメモリコピー。通常のmemcpyと異なり、コピー中にページフォルトが発生した場合
 // には、カーネルランドではなくユーザータスクで発生したページフォルトとして処理する。
@@ -71,7 +72,7 @@ static task_t sys_task_create(__user const char *name, uaddr_t ip,
     }
 
     // 通常のユーザータスクを作成する場合
-    return task_create(namebuf, ip, pager_task);
+    return task_create(namebuf, ip, pager_task, true);
 }
 
 // HinaVMタスクを生成する。instsはHinaVM命令列、num_instsは命令数、pagerはページャータスク。
@@ -324,6 +325,62 @@ static task_t sys_find_task(__user const char *name) {
     return 0;
 }
 
+void riscv32_fork_entry_trampoline(void);
+
+static task_t sys_fork() {
+    struct task *pager = CURRENT_TASK->pager;
+    if (!pager) {
+        PANIC("%s: unexpected error", CURRENT_TASK->name);
+    }
+    char namebuf[TASK_NAME_LEN];
+    strcpy_safe((char *) &namebuf, sizeof(namebuf), "child-process");
+    // タスクの初期化.エントリーポイントを含むレジスタの処理状態は親プロセスをコピーするので一旦zero値を渡している
+    task_t child_id = task_create(namebuf, (uaddr_t) 0x00000000, pager, false);
+    struct task *child = task_find(child_id);
+
+
+    // 親タスクで使われているメモリのコピー
+    struct message m;
+    m.type = FORK_TASK_MSG;
+    m.fork_task.parent = CURRENT_TASK->tid;
+    m.fork_task.child = child_id;
+    error_t err = ipc(pager, pager->tid, (__user struct message *) &m, IPC_CALL | IPC_KERNEL);
+    if (err != OK || m.type != FORK_TASK_REPLY_MSG) {
+        task_exit(EXP_INVALID_PAGER_REPLY);
+    }
+
+    // あらかじめ handle_syscall_trap 関数で親プロセスのレジスタ値をコピーしているのでそれをchildにもコピーする
+    memcpy(&child->arch.saved_reges, &CURRENT_TASK->arch.saved_reges, sizeof(struct riscv32_trap_frame));
+
+    // ecall 命令の次の命令に戻るようにする
+    child->arch.saved_reges.pc += 4;
+    INFO("child->arch.saved_reges.pc: %x, addr: %x", child->arch.saved_reges.pc, &child->arch.saved_reges);
+    // sys_fork() システムコールの戻り値
+    child->arch.saved_reges.a0 = 0;
+
+    uint32_t sp_top = child->arch.sp_bottom + KERNEL_STACK_SIZE;
+    uint32_t *sp = (uint32_t *) sp_top;
+    *--sp = (uint32_t) &child->arch.saved_reges;
+    *--sp = 0; // s11
+    *--sp = 0; // s10
+    *--sp = 0; // s9
+    *--sp = 0; // s8
+    *--sp = 0; // s7
+    *--sp = 0; // s6
+    *--sp = 0; // s5
+    *--sp = 0; // s4
+    *--sp = 0; // s3
+    *--sp = 0; // s2
+    *--sp = 0; // s1
+    *--sp = 0; // s0
+    *--sp = (uint32_t) riscv32_fork_entry_trampoline; //ra
+    child->arch.sp = (uint32_t) sp;
+
+    task_resume(child);
+
+    return child_id;
+}
+
 // コンピューターの電源を切る。
 __noreturn static int sys_shutdown(void) {
     arch_shutdown();
@@ -390,6 +447,9 @@ long handle_syscall(long a0, long a1, long a2, long a3, long a4, long n) {
             break;
         case SYS_SHUTDOWN:
             ret = sys_shutdown();
+            break;
+        case SYS_FORK:
+            ret = sys_fork();
             break;
         default:
             ret = ERR_INVALID_ARG;

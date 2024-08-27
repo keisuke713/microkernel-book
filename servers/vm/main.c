@@ -198,6 +198,16 @@ void main(void) {
                 }
                 break;
             }
+            case FORK_TASK_MSG: {
+                INFO("fork message");
+                task_t parent_id = m.fork_task.parent;
+                task_t child_id = m.fork_task.child;
+                task_fork(parent_id, child_id);
+
+                m.type = FORK_TASK_REPLY_MSG;
+                ipc_reply(parent_id, &m);
+                break;
+            }
             case PAGE_FAULT_MSG: {
                 if (m.src != FROM_KERNEL) {
                     WARN("forged PAGE_FAULT_MSG from #%d, ignoring...", m.src);

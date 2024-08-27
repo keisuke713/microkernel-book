@@ -139,7 +139,7 @@ void task_resume(struct task *task) {
 
 // タスクを作成する。ipはユーザーモードで実行するアドレス (エントリーポイント)、pagerは
 // ページャータスク。
-task_t task_create(const char *name, uaddr_t ip, struct task *pager) {
+task_t task_create(const char *name, uaddr_t ip, struct task *pager, bool starts_immediately) {
     INFO("task: %s", name);
     task_t tid = alloc_tid();
     if (!tid) {
@@ -155,7 +155,9 @@ task_t task_create(const char *name, uaddr_t ip, struct task *pager) {
     }
 
     list_push_back(&active_tasks, &task->next);
-    task_resume(task);
+    if (starts_immediately) {
+        task_resume(task);
+    }
     TRACE("created a task \"%s\" (tid=%d)", name, tid);
     return tid;
 }

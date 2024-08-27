@@ -25,3 +25,4 @@ int sys_uptime(void);
 int sys_number_of_interrupt(void);
 __noreturn void sys_shutdown(void);
 task_t sys_find_task(const char *name);
+int sys_fork();

@@ -45,7 +45,7 @@ struct task {
 extern list_t active_tasks;
 
 struct task *task_find(task_t tid);
-task_t task_create(const char *name, uaddr_t ip, struct task *pager);
+task_t task_create(const char *name, uaddr_t ip, struct task *pager, bool starts_immediately);
 task_t hinavm_create(const char *name, hinavm_inst_t *insts, uint32_t num_insts,
                      struct task *pager);
 error_t task_destroy(struct task *task);

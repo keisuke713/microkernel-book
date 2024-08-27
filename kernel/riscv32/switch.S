@@ -65,3 +65,11 @@ riscv32_user_entry_trampoline:
     // スタックから引数を取り出して、riscv32_user_entry関数にジャンプする
     lw a0, 0 * 4(sp) // ip
     j riscv32_user_entry
+
+// forkされたプロセスのエントリポイント
+.align 4
+.global riscv32_fork_entry_trampoline
+riscv32_fork_entry_trampoline:
+    // スタックから引数を取り出して、fork_entry関数にジャンプする
+    lw a0, 0 * 4(sp) // ip
+    j fork_entry
